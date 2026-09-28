@@ -19,23 +19,20 @@ describe("fact entry helpers", () => {
     const fact = createBlankFact(demo);
 
     expect(fact.measures.sales).toBeUndefined();
-    expect(fact.coordinates.product).toBe("product-sofa");
-    expect(fact.coordinates.location).toBe("location-perth");
+    expect(fact.coordinates.product).toBe(lowestLevelMembers(product)[0].id);
+    const location = demo.dimensions.find((dimension) => dimension.id === "location")!;
+    expect(fact.coordinates.location).toBe(lowestLevelMembers(location)[0].id);
     expect(validateDataset({ ...demo, facts: [fact] })).toContain(
       "Fact row 1 has a non-numeric Sales value.",
     );
   });
 
   it("chooses lowest-level members and avoids the current selection when possible", () => {
-    expect(lowestLevelMembers(product).map((member) => member.id)).toEqual([
-      "product-sofa",
-      "product-armchair",
-      "product-bookcase",
-      "product-bed-frame",
-    ]);
-    expect(randomMemberId(product, undefined, () => 0)).toBe("product-sofa");
-    expect(randomMemberId(product, undefined, () => 0.999)).toBe("product-bed-frame");
-    expect(randomMemberId(product, "product-sofa", () => 0)).toBe("product-armchair");
+    const members = lowestLevelMembers(product);
+    expect(members).toHaveLength(4);
+    expect(randomMemberId(product, undefined, () => 0)).toBe(members[0].id);
+    expect(randomMemberId(product, undefined, () => 0.999)).toBe(members.at(-1)?.id);
+    expect(randomMemberId(product, members[0].id, () => 0)).toBe(members[1].id);
   });
 
   it("handles a dimension without members and generates inclusive whole-number sales", () => {

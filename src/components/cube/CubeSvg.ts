@@ -11,7 +11,13 @@ export interface CubeSvgOptions {
 }
 
 export const createCubeSvgMarkup = (view: CubeViewModel, options: CubeSvgOptions = {}): string => {
-  const geometry = createCubeGeometry(view, options.geometry);
+  const includeTitle = options.includeTitle !== false;
+  const geometry = createCubeGeometry(view, {
+    ...options.geometry,
+    // Compact previews and PowerPoint slides do not render this SVG heading,
+    // so they can keep the original tighter canvas without risking overlap.
+    ...(!includeTitle && options.geometry?.topPadding === undefined ? { topPadding: 100 } : {}),
+  });
   const geometryByCoordinate = new Map(
     geometry.cells.map((cell) => [`${cell.xIndex}:${cell.yIndex}:${cell.zIndex}`, cell]),
   );
@@ -38,7 +44,7 @@ export const createCubeSvgMarkup = (view: CubeViewModel, options: CubeSvgOptions
     <desc id="cube-description">${escapeSvgText(view.description)}</desc>
     <rect width="100%" height="100%" fill="#ffffff" />
     <defs><marker id="axis-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#396176" /></marker></defs>
-    ${options.includeTitle === false ? "" : `<text x="24" y="34" font-family="Aptos, Arial, sans-serif" font-size="19" font-weight="700" fill="#123047">${escapeSvgText(view.operationLabel)}</text><text x="24" y="56" font-family="Aptos, Arial, sans-serif" font-size="12" fill="#496576">${escapeSvgText(`${view.datasetTitle} · ${view.measure.name} (SUM)`)}</text>`}
+    ${includeTitle ? `<text x="24" y="34" font-family="Aptos, Arial, sans-serif" font-size="19" font-weight="700" fill="#123047">${escapeSvgText(view.operationLabel)}</text><text x="24" y="56" font-family="Aptos, Arial, sans-serif" font-size="12" fill="#496576">${escapeSvgText(`${view.datasetTitle} · ${view.measure.name} (SUM)`)}</text>` : ""}
     ${cellsMarkup}
     ${cubeAxesMarkup(view, geometry)}
   </svg>`;

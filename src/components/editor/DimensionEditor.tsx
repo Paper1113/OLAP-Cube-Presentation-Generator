@@ -29,7 +29,7 @@ export const DimensionEditor = ({
       {dataset.dimensions.map((dimension) => {
         const levels = [...dimension.levels].sort((left, right) => left.order - right.order);
         return (
-          <details className="dimension-editor" key={dimension.id} open>
+          <details className="dimension-editor" key={dimension.id}>
             <summary>{dimension.name}</summary>
             <label>
               Dimension name

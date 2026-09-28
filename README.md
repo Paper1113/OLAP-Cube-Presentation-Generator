@@ -1,83 +1,92 @@
 # OLAP Cube Presentation Generator
 
-An educational, browser-only application for defining a three-dimensional OLAP dataset, exploring core OLAP operations, and exporting clear data-cube diagrams to SVG, PNG, and PowerPoint.
+An educational, browser-only app for generating a small industry sales cube, exploring core OLAP operations, and exporting clear diagrams to SVG, PNG, and PowerPoint. Generated figures are synthetic examples only; they do not represent real company sales.
 
-## Screenshot
+## Quick Setup
 
-> Screenshot placeholder: run the app with the built-in IKEA-style demo and add a current interface image here.
+The default flow needs only three actions:
 
-## Features
+1. Enter a **Dataset title**.
+2. Select an **Industry**.
+3. Select **Generate Dataset** (or **Regenerate Dataset** after a sample has been created).
 
-- Define exactly three dimensions, their hierarchy levels, members, and parent-member relationships.
-- Edit fact data in a grid or paste tab-separated rows from Excel; new manual rows leave the measure blank until entered.
-- Use per-cell random controls to choose a lowest-level member (including Product and Location) or generate a Sales value.
-- Visualize a hierarchy-aware data cube in SVG using readable pseudo-3D cells, labels, values, and axes.
-- Explore Original, Slice, Dice, Roll-up, and Drill-down views.
-- Aggregate values with `SUM` without mutating raw fact records.
-- Export the active diagram as SVG or high-resolution PNG.
-- Generate a six-slide `.pptx` presentation entirely in the browser with PptxGenJS.
-- Preview the presentation slides in the app before export.
-- Save the working dataset and operation settings locally in the browser with LocalStorage.
-- Deploy as a static GitHub Pages site; no backend, authentication, database, Firebase, or cloud storage is needed.
+Each preset creates a presentation-sized data cube with exactly three dimensions:
 
-## Technology
+```text
+Time       Year → Quarter → Month
+Product    Category → Product
+Location   Country → City
+```
 
-- React, TypeScript, and Vite
-- SVG for cube rendering
-- PptxGenJS for PowerPoint generation
-- Vitest for pure OLAP-engine tests
-- LocalStorage for optional persistence
+Raw facts stay at Month × Product × City. The standard cube contains 12 months, 4 products, 3 cities, and 144 Sales facts. Quarter, Category, and Country values are derived by the existing SUM aggregation engine rather than stored as duplicate facts.
 
-## Local setup
+The available industry samples are:
+
+- Furniture & Home Living
+- Consumer Electronics
+- Fashion & Apparel
+- Grocery & Supermarket
+- Automotive
+- Food & Beverage
+- Hospitality & Travel
+- Healthcare & Pharmacy
+- Sports & Fitness
+- Beauty & Personal Care
+
+## Generate Dataset vs Refresh Sales Data
+
+These controls are intentionally different:
+
+- **Generate Dataset** replaces the generated Time, Product, and Location hierarchies; recreates every leaf coordinate and Sales fact; and restores the default OLAP settings for the selected industry.
+- **Refresh Sales Data** changes only the synthetic `Sales` values. It keeps the dataset title, hierarchies, fact coordinate objects, axis mapping, active levels, and current operation settings.
+
+Changing the industry dropdown by itself never replaces the current dataset. Generate only when the chosen preset is ready to apply.
+
+## OLAP Operations
+
+The core controls remain outside Advanced Settings:
+
+1. **Original** — Quarterly Sales by Product and City.
+2. **Slice** — Fix one member, such as a City.
+3. **Dice** — Select member subsets across all three dimensions.
+4. **Roll-up** — Aggregate City to Country.
+5. **Drill-down** — Expand Quarter to Month.
+
+The current diagram can be exported as SVG or high-resolution PNG, and the generated workspace can be rendered in the presentation preview or downloaded as a six-slide PowerPoint file.
+
+## Advanced Settings
+
+Advanced Settings is collapsed by default so first-time users are not required to edit dimensions or facts. It contains:
+
+- Cube axis mapping.
+- Dimension, hierarchy, category, product, country, and city editing.
+- Fact Data, where Month/Product/City are read-only contextual labels and only Sales can be edited or randomized.
+- **Apply Changes & Rebuild Facts**, which rebuilds the complete leaf-level Cartesian product after hierarchy edits, preserves Sales for coordinates that still exist, adds Sales for new combinations, and removes stale or duplicate combinations.
+- Furniture sample and reset utilities.
+
+## Local development
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. The first launch uses an IKEA-style sales demo with Time, Product, and Location hierarchies.
-
-Useful commands:
+Run the regression checks with:
 
 ```bash
 npm run test
 npm run build
-npm run preview
 ```
 
 `npm run build` performs a strict TypeScript build and creates the static site in `dist/`.
 
-## Using the demo
-
-1. Start with **Original** to see quarterly sales by product and city.
-2. Choose **Slice** and select a single member, such as `Location = Perth`.
-3. Choose **Dice** and select member subsets across all three dimensions to form a smaller sub-cube.
-4. Choose **Roll-up** to aggregate a dimension, for example `Location: City -> Country`.
-5. Choose **Drill-down** to expand a dimension, for example `Time: Quarter -> Month`.
-6. Export the current diagram or generate the complete PowerPoint presentation.
-
-## OLAP behaviour
-
-### Slice
-
-Slice fixes exactly one member in one dimension and retains the other two dimensions. For example, selecting Perth from Location produces a Time x Product plane for Perth.
-
-### Dice
-
-Dice retains user-selected member subsets from multiple dimensions. The resulting diagram is a real sub-cube, not merely a highlighted version of the original cube.
-
-### Roll-up
-
-Roll-up moves a dimension to a higher hierarchy level and aggregates leaf facts with `SUM`. A City-to-Country roll-up therefore combines Perth and Sydney values under Australia while leaving raw facts unchanged.
-
-### Drill-down
-
-Drill-down moves a dimension to a lower level only when usable lower-level facts are present. If a dataset contains a total for `Q1` but no member-level facts for `Jan`, `Feb`, or `Mar`, the application reports that drill-down is unavailable instead of inventing values. This rule keeps the educational diagrams numerically correct.
-
 ## Architecture
 
 ```text
-Raw CubeDataset
+Industry Template
+      |
+      v
+Dataset Generator → WorkspaceState
       |
       v
 Pure OLAP engine (hierarchy traversal, selection, aggregation)
@@ -86,35 +95,25 @@ Pure OLAP engine (hierarchy traversal, selection, aggregation)
 CubeViewModel
       |
       v
-SVG cube renderer / export helpers / presentation preview
+SVG cube renderer / PNG and SVG export / presentation preview / PowerPoint
 ```
 
-The code is organized by responsibility:
+Key source folders:
 
 ```text
 src/
-  components/       React editors, operation controls, SVG cube, preview
-  demo/             hierarchy-aware IKEA-style dataset
+  components/       Quick Setup, advanced editors, operations, cube, presentation
+  generator/        industry presets, workspace generator, Sales generator, fact synchronizer
   engine/           pure hierarchy, aggregation, OLAP, and geometry logic
   export/           SVG, PNG, and PptxGenJS helpers
-  models/           domain and operation types
-  utils/            IDs, clipboard parsing, LocalStorage
+  models/           cube, dimension, operation, and workspace types
+  utils/            IDs, random Sales helper, clipboard parser, LocalStorage
 ```
+
+LocalStorage saves the current workspace, including industry generation metadata when available. Older saved workspaces without that optional metadata continue to load as custom datasets.
 
 ## GitHub Pages deployment
 
-The included workflow at `.github/workflows/deploy.yml` builds and deploys the `dist/` directory whenever changes are pushed to `main`.
+The included workflow at `.github/workflows/deploy.yml` builds and deploys `dist/` whenever changes are pushed to `main`. It uses `npm ci` for repeatable dependencies. In the repository’s GitHub settings, set **Pages > Build and deployment > Source** to **GitHub Actions** before the first deployment.
 
-Before the first deployment:
-
-1. Commit the npm lockfile produced by `npm install`; the workflow intentionally uses `npm ci` for repeatable builds.
-2. In the repository’s GitHub settings, set **Pages > Build and deployment > Source** to **GitHub Actions**.
-3. Push the `main` branch.
-
-Vite detects the GitHub Actions repository name and uses the matching repository subpath as its production base URL. The application is a single-page interface without client-side routes, so refreshing the published page does not need a routing fallback.
-
-## Limitations of the first release
-
-- The visual model intentionally represents exactly three dimensions.
-- `SUM` is the implemented aggregation method; the engine is structured so other methods can be added later.
-- This is an educational diagram generator rather than a connection to a live OLAP server, MDX, XMLA, Power BI, or SSAS.
+Vite detects the GitHub Actions repository name and uses the matching repository subpath as its production base URL. The app has no client-side routes, so refreshing the published interface needs no routing fallback.

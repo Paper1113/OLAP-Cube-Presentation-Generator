@@ -1,6 +1,8 @@
 import type { CubeViewModel } from "../models/cube";
 
 export interface CubeGeometryOptions {
+  /** Reserved vertical space above the cube for an optional SVG heading. */
+  topPadding: number;
   cellWidth: number;
   cellHeight: number;
   depthX: number;
@@ -28,6 +30,7 @@ export interface CubeGeometry {
 }
 
 export const defaultCubeGeometryOptions: CubeGeometryOptions = {
+  topPadding: 132,
   cellWidth: 90,
   cellHeight: 62,
   depthX: 29,
@@ -44,7 +47,7 @@ export const createCubeGeometry = (
   const xStep = options.cellWidth + options.spacing;
   const yStep = options.cellHeight + options.spacing;
   const originX = 130;
-  const originY = 100 + Math.max(0, view.z.members.length - 1) * options.depthY;
+  const originY = options.topPadding + Math.max(0, view.z.members.length - 1) * options.depthY;
   const cells: CubeCellGeometry[] = [];
 
   view.x.members.forEach((xMember, xIndex) => {

@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { CubeRenderer } from "./components/cube/CubeRenderer";
-import { DatasetEditor } from "./components/editor/DatasetEditor";
-import { DimensionEditor } from "./components/editor/DimensionEditor";
-import { FactGrid } from "./components/editor/FactGrid";
+import { AdvancedSettings } from "./components/editor/AdvancedSettings";
+import { QuickSetupPanel } from "./components/editor/QuickSetupPanel";
 import { OperationTabs } from "./components/operations/OperationTabs";
 import { PresentationPreview } from "./components/presentation/PresentationPreview";
-import { createIkeaDemoWorkspace } from "./demo/ikeaDemo";
 import { createCubeView } from "./engine/cubeEngine";
 import { validateDataset } from "./engine/validation";
 import { downloadPng } from "./export/pngExport";
 import { exportPresentation } from "./export/pptxExport";
 import { downloadSvg } from "./export/svgExport";
+import { generateIndustryWorkspace, refreshSalesFacts } from "./generator/datasetGenerator";
+import { synchronizeLeafFacts } from "./generator/factSynchronizer";
+import { defaultIndustryId, getIndustryTemplate } from "./generator/industryTemplates";
 import type { OperationConfig, WorkspaceState } from "./models/operation";
 import { clearWorkspace, loadWorkspace, saveWorkspace } from "./utils/storage";
 
@@ -49,10 +50,18 @@ const activeSvgElement = (): SVGSVGElement | null => {
   return element instanceof SVGSVGElement ? element : null;
 };
 
+const createDefaultWorkspace = (): WorkspaceState =>
+  generateIndustryWorkspace({ title: "Sample Sales Analysis", industryId: defaultIndustryId });
+
+const selectedIndustryFor = (workspace: WorkspaceState): string => {
+  const candidate = workspace.generation?.selectedIndustryId ?? workspace.generation?.industryId;
+  return getIndustryTemplate(candidate ?? "")?.id ?? defaultIndustryId;
+};
+
 export default function App() {
   const [workspace, setWorkspace] = useState<WorkspaceState>(() => {
     const stored = loadWorkspace();
-    return hasUsableDataset(stored) ? stored : createIkeaDemoWorkspace();
+    return hasUsableDataset(stored) ? stored : createDefaultWorkspace();
   });
   const [mode, setMode] = useState<AppMode>("editor");
   const [exportStatus, setExportStatus] = useState("");
@@ -73,6 +82,8 @@ export default function App() {
   const validationErrors = useMemo(() => validateDataset(workspace.dataset), [workspace.dataset]);
   const visibleErrors = [...validationErrors, ...cubeResult.errors];
   const filenameBase = safeFilename(`${workspace.dataset.title}-${operation.type}`);
+  const selectedIndustryId = selectedIndustryFor(workspace);
+  const generatedTemplate = getIndustryTemplate(workspace.generation?.industryId ?? "");
 
   const handleSvgExport = () => {
     const svg = activeSvgElement();
@@ -119,15 +130,57 @@ export default function App() {
     }
   };
 
+  const updateDatasetTitle = (title: string) => {
+    setWorkspace((current) => ({
+      ...current,
+      dataset: { ...current.dataset, title },
+    }));
+  };
+
+  const selectIndustry = (industryId: string) => {
+    setWorkspace((current) => ({
+      ...current,
+      generation: { ...current.generation, selectedIndustryId: industryId },
+    }));
+  };
+
+  const generateDataset = () => {
+    setWorkspace((current) => generateIndustryWorkspace({
+      title: current.dataset.title,
+      industryId: selectedIndustryFor(current),
+    }));
+    setExportStatus("A new industry dataset was generated with default OLAP settings.");
+  };
+
+  const refreshSalesData = () => {
+    if (!generatedTemplate) {
+      setExportStatus("Generate an industry dataset before refreshing its Sales values.");
+      return;
+    }
+    setWorkspace((current) => ({
+      ...current,
+      dataset: refreshSalesFacts(current.dataset, generatedTemplate),
+    }));
+    setExportStatus("Sales values were refreshed. Hierarchies, coordinates, and OLAP settings were preserved.");
+  };
+
+  const synchronizeFacts = () => {
+    setWorkspace((current) => ({
+      ...current,
+      dataset: synchronizeLeafFacts(current.dataset),
+    }));
+    setExportStatus("Leaf-level fact combinations were rebuilt from the current hierarchies.");
+  };
+
   const loadDemo = () => {
-    setWorkspace(createIkeaDemoWorkspace());
-    setExportStatus("The IKEA demo dataset is loaded.");
+    setWorkspace(createDefaultWorkspace());
+    setExportStatus("The Furniture & Home Living sample is loaded.");
   };
 
   const resetDataset = () => {
     clearWorkspace();
-    setWorkspace(createIkeaDemoWorkspace());
-    setExportStatus("The dataset was reset to the built-in demo.");
+    setWorkspace(createDefaultWorkspace());
+    setExportStatus("The dataset was reset to the built-in Furniture & Home Living sample.");
   };
 
   return (
@@ -146,21 +199,15 @@ export default function App() {
       {mode === "editor" ? (
         <main className="editor-layout">
           <aside className="editor-sidebar" aria-label="Dataset and operation controls">
-            <DatasetEditor
-              dataset={workspace.dataset}
-              axisMapping={workspace.axisMapping}
-              onDatasetChange={(dataset) => setWorkspace((current) => ({ ...current, dataset }))}
-              onAxisMappingChange={(axisMapping) => setWorkspace((current) => ({ ...current, axisMapping }))}
-            />
-            <DimensionEditor
-              dataset={workspace.dataset}
-              activeLevels={workspace.activeLevels}
-              onDatasetChange={(dataset) => setWorkspace((current) => ({ ...current, dataset }))}
-              onActiveLevelsChange={(activeLevels) => setWorkspace((current) => ({ ...current, activeLevels }))}
-            />
-            <FactGrid
-              dataset={workspace.dataset}
-              onDatasetChange={(dataset) => setWorkspace((current) => ({ ...current, dataset }))}
+            <QuickSetupPanel
+              title={workspace.dataset.title}
+              selectedIndustryId={selectedIndustryId}
+              generated={Boolean(workspace.generation?.generated)}
+              canRefreshSales={Boolean(generatedTemplate)}
+              onTitleChange={updateDatasetTitle}
+              onIndustryChange={selectIndustry}
+              onGenerate={generateDataset}
+              onRefreshSales={refreshSalesData}
             />
             <OperationTabs
               dataset={workspace.dataset}
@@ -168,10 +215,18 @@ export default function App() {
               operations={workspace.operations}
               onOperationsChange={(operations) => setWorkspace((current) => ({ ...current, operations }))}
             />
-            <div className="dataset-actions">
-              <button type="button" className="secondary-button" onClick={loadDemo}>Load demo dataset</button>
-              <button type="button" className="text-button danger-button" onClick={resetDataset}>Reset dataset</button>
-            </div>
+            <AdvancedSettings
+              dataset={workspace.dataset}
+              axisMapping={workspace.axisMapping}
+              activeLevels={workspace.activeLevels}
+              onDatasetChange={(dataset) => setWorkspace((current) => ({ ...current, dataset }))}
+              onAxisMappingChange={(axisMapping) => setWorkspace((current) => ({ ...current, axisMapping }))}
+              onActiveLevelsChange={(activeLevels) => setWorkspace((current) => ({ ...current, activeLevels }))}
+              onSynchronizeFacts={synchronizeFacts}
+              onRefreshSales={refreshSalesData}
+              onLoadSample={loadDemo}
+              onReset={resetDataset}
+            />
           </aside>
 
           <section className="preview-area" aria-label="Cube preview">

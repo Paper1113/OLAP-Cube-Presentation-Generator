@@ -48,9 +48,19 @@ export interface OperationSettings {
   drilldown: Omit<DrilldownOperation, "type">;
 }
 
+/** Optional metadata added by the industry generator; older saved workspaces omit it. */
+export interface WorkspaceGenerationMetadata {
+  /** The preset that produced the currently generated dataset. */
+  industryId?: string;
+  /** A Quick Setup selection can be pending until Generate Dataset is clicked. */
+  selectedIndustryId?: string;
+  generated?: boolean;
+}
+
 export interface WorkspaceState {
   dataset: import("./cube").CubeDataset;
   axisMapping: AxisMapping;
   activeLevels: Record<string, string>;
   operations: OperationSettings;
+  generation?: WorkspaceGenerationMetadata;
 }
