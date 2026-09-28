@@ -117,3 +117,7 @@ LocalStorage saves the current workspace, including industry generation metadata
 The included workflow at `.github/workflows/deploy.yml` builds and deploys `dist/` whenever changes are pushed to `main`. It uses `npm ci` for repeatable dependencies. In the repository’s GitHub settings, set **Pages > Build and deployment > Source** to **GitHub Actions** before the first deployment.
 
 Vite detects the GitHub Actions repository name and uses the matching repository subpath as its production base URL. The app has no client-side routes, so refreshing the published interface needs no routing fallback.
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
