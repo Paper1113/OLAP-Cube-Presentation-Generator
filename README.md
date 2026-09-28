@@ -9,7 +9,8 @@ An educational, browser-only application for defining a three-dimensional OLAP d
 ## Features
 
 - Define exactly three dimensions, their hierarchy levels, members, and parent-member relationships.
-- Edit fact data in a grid or paste tab-separated rows from Excel.
+- Edit fact data in a grid or paste tab-separated rows from Excel; new manual rows leave the measure blank until entered.
+- Use per-cell random controls to choose a lowest-level member (including Product and Location) or generate a Sales value.
 - Visualize a hierarchy-aware data cube in SVG using readable pseudo-3D cells, labels, values, and axes.
 - Explore Original, Slice, Dice, Roll-up, and Drill-down views.
 - Aggregate values with `SUM` without mutating raw fact records.

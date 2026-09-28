@@ -165,10 +165,14 @@ fieldset { min-width: 0; border: 1px solid #d7e2e8; border-radius: .5rem; }
 .danger-button:disabled { opacity: .45; cursor: not-allowed; }
 
 .fact-table-wrap { overflow: auto; max-height: 25rem; margin-bottom: .75rem; border: 1px solid #dae4e9; border-radius: .45rem; }
-.fact-table { width: 100%; min-width: 540px; border-collapse: collapse; font-size: .79rem; }
+.fact-table { width: 100%; min-width: 630px; border-collapse: collapse; font-size: .79rem; }
 .fact-table th { position: sticky; top: 0; z-index: 1; color: #153c53; background: #edf5f8; text-align: left; }
 .fact-table th, .fact-table td { padding: .4rem; border-bottom: 1px solid #e1eaee; }
-.fact-table td input, .fact-table td select { min-width: 104px; padding: .38rem; font-size: .78rem; }
+.fact-cell-control { display: flex; align-items: center; gap: .3rem; }
+.fact-cell-control input, .fact-cell-control select { min-width: 104px; flex: 1; padding: .38rem; font-size: .78rem; }
+.fact-random-button { flex: 0 0 1.72rem; width: 1.72rem; height: 1.72rem; border: 1px solid #a8cddc; border-radius: .38rem; color: #145775; background: #edf7fb; font-size: .88rem; line-height: 1; }
+.fact-random-button:hover:not(:disabled) { border-color: #4192b3; background: #d9eff7; }
+.fact-random-button:disabled { opacity: .45; cursor: not-allowed; }
 .fact-table .icon-button { width: 1.65rem; height: 1.65rem; }
 
 .paste-import { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e9ed; }

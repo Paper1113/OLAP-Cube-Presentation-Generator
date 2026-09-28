@@ -1,19 +1,19 @@
 import { useState } from "react";
 import type { CubeDataset, FactRecord } from "../../models/cube";
 import { parseFactClipboard } from "../../utils/clipboardParser";
+import {
+  createBlankFact,
+  lowestLevelMembers,
+  randomMemberId,
+  RANDOM_SALES_MAX,
+  RANDOM_SALES_MIN,
+  randomSalesValue,
+} from "../../utils/factRandomizer";
 
 interface FactGridProps {
   dataset: CubeDataset;
   onDatasetChange: (dataset: CubeDataset) => void;
 }
-
-const firstFact = (dataset: CubeDataset): FactRecord => ({
-  coordinates: Object.fromEntries(dataset.dimensions.map((dimension) => [
-    dimension.id,
-    [...dimension.levels].sort((left, right) => right.order - left.order)[0]?.members[0]?.id ?? "",
-  ])),
-  measures: { [dataset.measures[0]?.id ?? "measure"]: 0 },
-});
 
 export const FactGrid = ({ dataset, onDatasetChange }: FactGridProps) => {
   const [pasteText, setPasteText] = useState("");
@@ -25,6 +25,19 @@ export const FactGrid = ({ dataset, onDatasetChange }: FactGridProps) => {
       ...dataset,
       facts: dataset.facts.map((fact, index) => index === rowIndex ? update(fact) : fact),
     });
+  };
+
+  const clearOrSetMeasure = (fact: FactRecord, measureId: string, rawValue: string): FactRecord => {
+    const measures = { ...fact.measures };
+    if (!rawValue.trim()) {
+      delete measures[measureId];
+      return { ...fact, measures };
+    }
+
+    const value = Number(rawValue);
+    return Number.isFinite(value)
+      ? { ...fact, measures: { ...measures, [measureId]: value } }
+      : fact;
   };
 
   const importClipboard = () => {
@@ -41,7 +54,7 @@ export const FactGrid = ({ dataset, onDatasetChange }: FactGridProps) => {
   return (
     <section className="editor-section" aria-labelledby="facts-heading">
       <h2 id="facts-heading">Fact data</h2>
-      <p className="hint">Use lower-level members where available. Higher-level values remain derived rather than stored.</p>
+      <p className="hint">New rows leave the measure blank. Use 🎲 to choose a lowest-level member or generate a value from 100 to 5,000.</p>
       <div className="fact-table-wrap">
         <table className="fact-table">
           <thead>
@@ -56,33 +69,69 @@ export const FactGrid = ({ dataset, onDatasetChange }: FactGridProps) => {
               <tr key={`${rowIndex}-${Object.values(fact.coordinates).join("-")}`}>
                 {dataset.dimensions.map((dimension) => (
                   <td key={dimension.id}>
-                    <select
-                      aria-label={`${dimension.name} for row ${rowIndex + 1}`}
-                      value={fact.coordinates[dimension.id] ?? ""}
-                      onChange={(event) => updateFact(rowIndex, (current) => ({
-                        ...current,
-                        coordinates: { ...current.coordinates, [dimension.id]: event.target.value },
-                      }))}
-                    >
-                      {dimension.levels.map((level) => (
-                        <optgroup key={level.id} label={level.name}>
-                          {level.members.map((member) => <option key={member.id} value={member.id}>{member.label}</option>)}
-                        </optgroup>
-                      ))}
-                    </select>
+                    <div className="fact-cell-control">
+                      <select
+                        aria-label={`${dimension.name} for row ${rowIndex + 1}`}
+                        value={fact.coordinates[dimension.id] ?? ""}
+                        onChange={(event) => updateFact(rowIndex, (current) => ({
+                          ...current,
+                          coordinates: { ...current.coordinates, [dimension.id]: event.target.value },
+                        }))}
+                      >
+                        {dimension.levels.map((level) => (
+                          <optgroup key={level.id} label={level.name}>
+                            {level.members.map((member) => <option key={member.id} value={member.id}>{member.label}</option>)}
+                          </optgroup>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        className="fact-random-button"
+                        aria-label={`Choose a random ${dimension.name} for row ${rowIndex + 1}`}
+                        title={`Choose a random ${dimension.name} from its lowest level`}
+                        disabled={lowestLevelMembers(dimension).length === 0}
+                        onClick={() => updateFact(rowIndex, (current) => {
+                          const memberId = randomMemberId(dimension, current.coordinates[dimension.id]);
+                          return memberId
+                            ? { ...current, coordinates: { ...current.coordinates, [dimension.id]: memberId } }
+                            : current;
+                        })}
+                      >
+                        🎲
+                      </button>
+                    </div>
                   </td>
                 ))}
                 <td>
-                  <input
-                    aria-label={`${measure?.name ?? "Measure"} for row ${rowIndex + 1}`}
-                    type="number"
-                    step="any"
-                    value={fact.measures[measure?.id ?? ""] ?? 0}
-                    onChange={(event) => updateFact(rowIndex, (current) => ({
-                      ...current,
-                      measures: { ...current.measures, [measure?.id ?? ""]: Number(event.target.value) },
-                    }))}
-                  />
+                  <div className="fact-cell-control">
+                    <input
+                      aria-label={`${measure?.name ?? "Measure"} for row ${rowIndex + 1}`}
+                      type="number"
+                      step="any"
+                      placeholder="Enter value"
+                      value={measure ? fact.measures[measure.id] ?? "" : ""}
+                      onChange={(event) => {
+                        if (!measure) return;
+                        updateFact(rowIndex, (current) => clearOrSetMeasure(current, measure.id, event.target.value));
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="fact-random-button"
+                      aria-label={`Generate random ${measure?.name ?? "measure"} for row ${rowIndex + 1}`}
+                      title={`Generate a random value from ${RANDOM_SALES_MIN.toLocaleString()} to ${RANDOM_SALES_MAX.toLocaleString()}`}
+                      disabled={!measure}
+                      onClick={() => {
+                        if (!measure) return;
+                        updateFact(rowIndex, (current) => ({
+                          ...current,
+                          measures: { ...current.measures, [measure.id]: randomSalesValue() },
+                        }));
+                      }}
+                    >
+                      🎲
+                    </button>
+                  </div>
                 </td>
                 <td><button type="button" className="icon-button danger-button" aria-label={`Remove fact row ${rowIndex + 1}`} onClick={() => onDatasetChange({ ...dataset, facts: dataset.facts.filter((_, index) => index !== rowIndex) })}>×</button></td>
               </tr>
@@ -90,7 +139,7 @@ export const FactGrid = ({ dataset, onDatasetChange }: FactGridProps) => {
           </tbody>
         </table>
       </div>
-      <button type="button" className="secondary-button" onClick={() => onDatasetChange({ ...dataset, facts: [...dataset.facts, firstFact(dataset)] })}>+ Add fact row</button>
+      <button type="button" className="secondary-button" onClick={() => onDatasetChange({ ...dataset, facts: [...dataset.facts, createBlankFact(dataset)] })}>+ Add fact row</button>
       <div className="paste-import">
         <label>
           Paste tab-separated Excel data
