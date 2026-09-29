@@ -3,6 +3,7 @@ import {
   buildPresentationSlides,
   type PresentationInput,
 } from "../../export/pptxExport";
+import { normalizeCubeAppearance } from "../../theme/cubeAppearance";
 import { SlidePreview } from "./SlidePreview";
 
 export interface PresentationPreviewProps extends PresentationInput {
@@ -19,6 +20,7 @@ export const PresentationPreview = ({
   axisMapping,
   activeLevels,
   operations,
+  appearance,
   initialSlide = 1,
   className = "",
   onClose,
@@ -48,7 +50,7 @@ export const PresentationPreview = ({
         <h1>Presentation Preview</h1>
         {onClose && <button type="button" onClick={onClose}>Back to editor</button>}
       </div>
-      <SlidePreview slide={slide} totalSlides={slides.length} />
+      <SlidePreview slide={slide} totalSlides={slides.length} appearance={normalizeCubeAppearance(appearance)} />
       <nav className="presentation-preview__navigation" aria-label="Presentation slides">
         <button
           type="button"

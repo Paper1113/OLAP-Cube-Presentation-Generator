@@ -311,3 +311,29 @@ fieldset { min-width: 0; border: 1px solid #d7e2e8; border-radius: .5rem; }
   .slide-preview__body, .slide-preview__content { grid-template-columns: 1fr; }
   .slide-preview__details, .slide-preview__notes { border-left: 0; border-top: 4px solid #6cadc9; }
 }
+
+
+/* Cube appearance controls */
+.cube-appearance { border-color: #bdd3de; }
+.cube-appearance__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+.cube-appearance__heading h2 { margin: 0 0 .35rem; }
+.cube-appearance__heading .hint { margin-bottom: .7rem; }
+.cube-appearance__badge { flex: 0 0 auto; padding: .24rem .45rem; border-radius: .35rem; color: #31596f; background: #edf5f8; font-size: .68rem; font-weight: 800; white-space: nowrap; }
+.cube-appearance__fieldset { margin: .7rem 0 0; padding: .7rem; }
+.cube-appearance__fieldset legend { padding: 0 .3rem; color: #476778; font-size: .78rem; font-weight: 800; }
+.cube-palette-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .45rem; }
+.cube-palette-option { display: grid; justify-items: center; gap: .28rem; min-width: 0; padding: .45rem .2rem; border: 1px solid #d3e0e6; border-radius: .45rem; color: #35596c; background: #fff; font-size: .68rem; font-weight: 700; }
+.cube-palette-option:hover { border-color: #8eb7c8; background: #f7fbfd; }
+.cube-palette-option[aria-pressed="true"] { border-color: #17688c; box-shadow: 0 0 0 2px rgb(23 104 140 / 14%); color: #123047; background: #f1f8fb; }
+.cube-palette-option__swatch { width: 1.75rem; height: 1.75rem; border: 2px solid #fff; border-radius: 50%; background: var(--cube-swatch); box-shadow: 0 0 0 1px rgb(17 52 70 / 24%); }
+.cube-style-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+.cube-style-option { display: grid; gap: .16rem; min-width: 0; padding: .58rem .62rem; border: 1px solid #d3e0e6; border-radius: .48rem; color: #315569; background: #fbfdfe; text-align: left; }
+.cube-style-option:hover { border-color: #8eb7c8; background: #f5fafc; }
+.cube-style-option[aria-pressed="true"] { border-color: #17688c; color: #123047; background: #edf7fb; box-shadow: inset 3px 0 0 #17688c; }
+.cube-style-option strong { font-size: .78rem; }
+.cube-style-option span { color: #607d8b; font-size: .68rem; line-height: 1.35; }
+
+@media (max-width: 640px) {
+  .cube-appearance__heading { align-items: stretch; flex-direction: column; }
+  .cube-style-grid { grid-template-columns: 1fr; }
+}

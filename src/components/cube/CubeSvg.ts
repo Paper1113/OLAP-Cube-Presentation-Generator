@@ -1,5 +1,9 @@
 import type { CubeViewModel } from "../../models/cube";
 import { createCubeGeometry, type CubeGeometryOptions } from "../../engine/cubeGeometry";
+import {
+  resolveCubeVisualTheme,
+  type CubeAppearance,
+} from "../../theme/cubeAppearance";
 import { cubeAxesMarkup } from "./CubeAxis";
 import { cubeCellMarkup } from "./CubeCell";
 import { escapeSvgText } from "./CubeLabels";
@@ -8,14 +12,14 @@ export interface CubeSvgOptions {
   id?: string;
   geometry?: Partial<CubeGeometryOptions>;
   includeTitle?: boolean;
+  appearance?: CubeAppearance;
 }
 
 export const createCubeSvgMarkup = (view: CubeViewModel, options: CubeSvgOptions = {}): string => {
   const includeTitle = options.includeTitle !== false;
+  const theme = resolveCubeVisualTheme(options.appearance);
   const geometry = createCubeGeometry(view, {
     ...options.geometry,
-    // Compact previews and PowerPoint slides do not render this SVG heading,
-    // so they can keep the original tighter canvas without risking overlap.
     ...(!includeTitle && options.geometry?.topPadding === undefined ? { topPadding: 100 } : {}),
   });
   const geometryByCoordinate = new Map(
@@ -35,17 +39,17 @@ export const createCubeSvgMarkup = (view: CubeViewModel, options: CubeSvgOptions
   });
   const cellsMarkup = orderedCells.map((cell) => {
     const cellGeometry = geometryByCoordinate.get(`${xIndex.get(cell.xMemberId) ?? 0}:${yIndex.get(cell.yMemberId) ?? 0}:${zIndex.get(cell.zMemberId) ?? 0}`);
-    return cellGeometry ? cubeCellMarkup(cell, cellGeometry, geometry.options, view.measure.name) : "";
+    return cellGeometry ? cubeCellMarkup(cell, cellGeometry, geometry.options, view.measure.name, theme) : "";
   }).join("");
   const title = `${view.operationLabel}: ${view.datasetTitle}`;
 
   return `<svg${options.id ? ` id="${escapeSvgText(options.id)}"` : ""} xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="cube-title cube-description" viewBox="${geometry.viewBox}" width="${geometry.width}" height="${geometry.height}">
     <title id="cube-title">${escapeSvgText(title)}</title>
     <desc id="cube-description">${escapeSvgText(view.description)}</desc>
-    <rect width="100%" height="100%" fill="#ffffff" />
-    <defs><marker id="axis-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#396176" /></marker></defs>
-    ${includeTitle ? `<text x="24" y="34" font-family="Aptos, Arial, sans-serif" font-size="19" font-weight="700" fill="#123047">${escapeSvgText(view.operationLabel)}</text><text x="24" y="56" font-family="Aptos, Arial, sans-serif" font-size="12" fill="#496576">${escapeSvgText(`${view.datasetTitle} · ${view.measure.name} (SUM)`)}</text>` : ""}
+    <rect width="100%" height="100%" fill="${theme.background}" />
+    <defs><marker id="axis-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="${theme.markerFill}" /></marker></defs>
+    ${includeTitle ? `<text x="24" y="34" font-family="Aptos, Arial, sans-serif" font-size="19" font-weight="700" fill="${theme.titleFill}">${escapeSvgText(view.operationLabel)}</text><text x="24" y="56" font-family="Aptos, Arial, sans-serif" font-size="12" fill="${theme.subtitleFill}">${escapeSvgText(`${view.datasetTitle} · ${view.measure.name} (SUM)`)}</text>` : ""}
     ${cellsMarkup}
-    ${cubeAxesMarkup(view, geometry)}
+    ${cubeAxesMarkup(view, geometry, theme)}
   </svg>`;
 };

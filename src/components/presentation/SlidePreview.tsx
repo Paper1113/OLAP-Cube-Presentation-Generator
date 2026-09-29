@@ -1,9 +1,11 @@
 import { CubeRenderer } from "../cube/CubeRenderer";
 import type { PresentationSlideModel } from "../../export/pptxExport";
+import type { CubeAppearance } from "../../theme/cubeAppearance";
 
 export interface SlidePreviewProps {
   slide: PresentationSlideModel;
   totalSlides: number;
+  appearance: CubeAppearance;
 }
 
 /**
@@ -11,7 +13,7 @@ export interface SlidePreviewProps {
  * same CubeViewModel as the PPTX exporter, keeping slide previews and exports
  * aligned without trying to emulate PowerPoint XML in the browser.
  */
-export const SlidePreview = ({ slide, totalSlides }: SlidePreviewProps) => {
+export const SlidePreview = ({ slide, totalSlides, appearance }: SlidePreviewProps) => {
   if (slide.kind === "title") {
     return (
       <article className="slide-preview slide-preview--title" aria-label={`Slide ${slide.number} of ${totalSlides}: ${slide.title}`}>
@@ -34,6 +36,7 @@ export const SlidePreview = ({ slide, totalSlides }: SlidePreviewProps) => {
           {slide.view ? (
             <CubeRenderer
               view={slide.view}
+              appearance={appearance}
               svgId={`presentation-slide-${slide.number}-cube`}
               compact
             />

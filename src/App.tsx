@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CubeRenderer } from "./components/cube/CubeRenderer";
 import { AdvancedSettings } from "./components/editor/AdvancedSettings";
+import { CubeAppearancePanel } from "./components/editor/CubeAppearancePanel";
 import { QuickSetupPanel } from "./components/editor/QuickSetupPanel";
 import { OperationTabs } from "./components/operations/OperationTabs";
 import { PresentationPreview } from "./components/presentation/PresentationPreview";
@@ -13,6 +14,11 @@ import { generateIndustryWorkspace, refreshSalesFacts } from "./generator/datase
 import { synchronizeLeafFacts } from "./generator/factSynchronizer";
 import { defaultIndustryId, getIndustryTemplate } from "./generator/industryTemplates";
 import type { OperationConfig, WorkspaceState } from "./models/operation";
+import {
+  DEFAULT_CUBE_APPEARANCE,
+  normalizeCubeAppearance,
+  type CubeAppearance,
+} from "./theme/cubeAppearance";
 import { clearWorkspace, loadWorkspace, saveWorkspace } from "./utils/storage";
 
 type AppMode = "editor" | "presentation";
@@ -50,8 +56,8 @@ const activeSvgElement = (): SVGSVGElement | null => {
   return element instanceof SVGSVGElement ? element : null;
 };
 
-const createDefaultWorkspace = (): WorkspaceState =>
-  generateIndustryWorkspace({ title: "Sample Sales Analysis", industryId: defaultIndustryId });
+const createDefaultWorkspace = (appearance: CubeAppearance = DEFAULT_CUBE_APPEARANCE): WorkspaceState =>
+  generateIndustryWorkspace({ title: "Sample Sales Analysis", industryId: defaultIndustryId, appearance });
 
 const selectedIndustryFor = (workspace: WorkspaceState): string => {
   const candidate = workspace.generation?.selectedIndustryId ?? workspace.generation?.industryId;
@@ -84,6 +90,7 @@ export default function App() {
   const filenameBase = safeFilename(`${workspace.dataset.title}-${operation.type}`);
   const selectedIndustryId = selectedIndustryFor(workspace);
   const generatedTemplate = getIndustryTemplate(workspace.generation?.industryId ?? "");
+  const appearance = useMemo(() => normalizeCubeAppearance(workspace.appearance), [workspace.appearance]);
 
   const handleSvgExport = () => {
     const svg = activeSvgElement();
@@ -122,6 +129,7 @@ export default function App() {
         axisMapping: workspace.axisMapping,
         activeLevels: workspace.activeLevels,
         operations: workspace.operations,
+        appearance,
         filename: `${safeFilename(workspace.dataset.title)}-olap-analysis.pptx`,
       });
       setExportStatus("PowerPoint download started.");
@@ -148,6 +156,7 @@ export default function App() {
     setWorkspace((current) => generateIndustryWorkspace({
       title: current.dataset.title,
       industryId: selectedIndustryFor(current),
+      appearance: normalizeCubeAppearance(current.appearance),
     }));
     setExportStatus("A new industry dataset was generated with default OLAP settings.");
   };
@@ -173,7 +182,7 @@ export default function App() {
   };
 
   const loadDemo = () => {
-    setWorkspace(createDefaultWorkspace());
+    setWorkspace((current) => createDefaultWorkspace(normalizeCubeAppearance(current.appearance)));
     setExportStatus("The Furniture & Home Living sample is loaded.");
   };
 
@@ -208,6 +217,10 @@ export default function App() {
               onIndustryChange={selectIndustry}
               onGenerate={generateDataset}
               onRefreshSales={refreshSalesData}
+            />
+            <CubeAppearancePanel
+              appearance={appearance}
+              onChange={(nextAppearance) => setWorkspace((current) => ({ ...current, appearance: nextAppearance }))}
             />
             <OperationTabs
               dataset={workspace.dataset}
@@ -245,7 +258,7 @@ export default function App() {
                 <span className="preview-badge">SVG</span>
               </div>
               {cubeResult.view ? (
-                <CubeRenderer view={cubeResult.view} svgId="main-cube-svg" />
+                <CubeRenderer view={cubeResult.view} appearance={appearance} svgId="main-cube-svg" />
               ) : (
                 <div className="empty-preview"><p>Correct the data or operation settings to render the cube.</p></div>
               )}
@@ -267,6 +280,7 @@ export default function App() {
             axisMapping={workspace.axisMapping}
             activeLevels={workspace.activeLevels}
             operations={workspace.operations}
+            appearance={appearance}
             onClose={() => setMode("editor")}
           />
         </main>
