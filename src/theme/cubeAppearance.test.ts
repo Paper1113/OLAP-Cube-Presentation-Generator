@@ -4,6 +4,7 @@ import {
   cubePalettes,
   DEFAULT_CUBE_APPEARANCE,
   normalizeCubeAppearance,
+  randomCubeAppearance,
   resolveCubeVisualTheme,
   type CubeAppearance,
 } from "./cubeAppearance";
@@ -34,6 +35,18 @@ describe("cube appearance presets", () => {
     cubePalettes.forEach((palette) => {
       expect(contrastRatio(palette.onPrimary, palette.primary)).toBeGreaterThanOrEqual(4.5);
     });
+  });
+
+  it("randomizes both palette and style away from the current appearance", () => {
+    const current: CubeAppearance = { paletteId: "ocean", styleId: "classic" };
+    const first = randomCubeAppearance(current, () => 0);
+    const last = randomCubeAppearance(current, () => 0.999999);
+
+    expect(first.paletteId).not.toBe(current.paletteId);
+    expect(first.styleId).not.toBe(current.styleId);
+    expect(last.paletteId).not.toBe(current.paletteId);
+    expect(last.styleId).not.toBe(current.styleId);
+    expect(first).not.toEqual(last);
   });
 
   it("falls back safely when an older or invalid saved appearance is loaded", () => {

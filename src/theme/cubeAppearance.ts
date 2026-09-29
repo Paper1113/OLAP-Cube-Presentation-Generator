@@ -105,6 +105,28 @@ export const normalizeCubeAppearance = (
   return { paletteId, styleId };
 };
 
+export const randomCubeAppearance = (
+  current?: Partial<CubeAppearance> | null,
+  random: () => number = Math.random,
+): CubeAppearance => {
+  const normalizedCurrent = normalizeCubeAppearance(current);
+  const candidates = cubePalettes.flatMap((palette) =>
+    cubeDrawingStyles
+      .filter((style) =>
+        !current
+        || (palette.id !== normalizedCurrent.paletteId && style.id !== normalizedCurrent.styleId),
+      )
+      .map((style) => ({ paletteId: palette.id, styleId: style.id })),
+  );
+  const pool = candidates.length > 0
+    ? candidates
+    : cubePalettes.flatMap((palette) =>
+        cubeDrawingStyles.map((style) => ({ paletteId: palette.id, styleId: style.id })),
+      );
+  const index = Math.min(pool.length - 1, Math.floor(clamp(random()) * pool.length));
+  return pool[index];
+};
+
 export const resolveCubeVisualTheme = (
   appearance?: Partial<CubeAppearance> | null,
 ): ResolvedCubeTheme => {

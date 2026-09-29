@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import {
   cubeDrawingStyles,
   cubePalettes,
+  randomCubeAppearance,
   resolveCubeVisualTheme,
   type CubeAppearance,
 } from "../../theme/cubeAppearance";
@@ -24,6 +25,14 @@ export const CubeAppearancePanel = ({ appearance, onChange }: CubeAppearancePane
         </div>
         <span className="cube-appearance__badge">{theme.palette.label} · {cubeDrawingStyles.find((style) => style.id === appearance.styleId)?.label}</span>
       </div>
+
+      <button
+        type="button"
+        className="secondary-button"
+        onClick={() => onChange(randomCubeAppearance(appearance))}
+      >
+        🎲 Random Appearance
+      </button>
 
       <fieldset className="cube-appearance__fieldset">
         <legend>Colour palette</legend>
