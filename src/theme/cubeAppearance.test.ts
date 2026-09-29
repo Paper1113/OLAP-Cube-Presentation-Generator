@@ -44,6 +44,22 @@ describe("cube appearance presets", () => {
     });
   });
 
+  it("keeps Minimal and Wireframe graphical outlines at WCAG non-text contrast", () => {
+    cubePalettes.forEach((palette) => {
+      (["minimal", "wireframe"] as const).forEach((styleId) => {
+        const theme = resolveCubeVisualTheme({ paletteId: palette.id, styleId });
+        expect(contrastRatio(theme.stroke, theme.background)).toBeGreaterThanOrEqual(3);
+        expect(contrastRatio(theme.axisStroke, theme.background)).toBeGreaterThanOrEqual(3);
+
+        if (styleId === "minimal") {
+          expect(contrastRatio(theme.stroke, theme.frontFill)).toBeGreaterThanOrEqual(3);
+          expect(contrastRatio(theme.stroke, theme.topFill)).toBeGreaterThanOrEqual(3);
+          expect(contrastRatio(theme.stroke, theme.rightFill)).toBeGreaterThanOrEqual(3);
+        }
+      });
+    });
+  });
+
   it("randomizes both palette and style away from the current appearance", () => {
     const current: CubeAppearance = { paletteId: "ocean", styleId: "classic" };
     const first = randomCubeAppearance(current, () => 0);

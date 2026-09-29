@@ -160,11 +160,11 @@ export const resolveCubeVisualTheme = (
         frontFill: softer,
         topFill: "#ffffff",
         rightFill: soft,
-        stroke: palette.primary,
+        stroke: mediumDark,
         strokeWidth: 0.9,
         valueFill: dark,
         valueFontWeight: 650,
-        axisStroke: palette.primary,
+        axisStroke: mediumDark,
         axisStrokeWidth: 1.1,
       };
     case "wireframe":
@@ -176,12 +176,12 @@ export const resolveCubeVisualTheme = (
         emptyFrontFill: "none",
         emptyTopFill: "none",
         emptyRightFill: "none",
-        stroke: palette.primary,
+        stroke: mediumDark,
         strokeWidth: 1.65,
         sideStrokeDasharray: "4 2",
         valueFill: dark,
         valueFontWeight: 700,
-        axisStroke: palette.primary,
+        axisStroke: mediumDark,
         axisStrokeWidth: 1.45,
         axisStrokeDasharray: "6 3",
       };
