@@ -191,11 +191,11 @@ export const resolveCubeVisualTheme = (
         frontFill: palette.primary,
         topFill: mixHex(palette.primary, "#ffffff", 0.2),
         rightFill: mixHex(palette.primary, "#000000", 0.15),
-        stroke: dark,
+        stroke: "#000000",
         strokeWidth: 2.05,
         valueFill: palette.onPrimary,
         valueFontWeight: 800,
-        axisStroke: dark,
+        axisStroke: "#000000",
         axisStrokeWidth: 2,
       };
     default:

@@ -79,6 +79,16 @@ describe("cube appearance presets", () => {
     });
   });
 
+  it("keeps Bold cell outlines at non-text contrast against every face fill", () => {
+    cubePalettes.forEach((palette) => {
+      const theme = resolveCubeVisualTheme({ paletteId: palette.id, styleId: "bold" });
+
+      expect(contrastRatio(theme.stroke, theme.frontFill)).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(theme.stroke, theme.topFill)).toBeGreaterThanOrEqual(3);
+      expect(contrastRatio(theme.stroke, theme.rightFill)).toBeGreaterThanOrEqual(3);
+    });
+  });
+
   it("randomizes both palette and style away from the current appearance", () => {
     const current: CubeAppearance = { paletteId: "ocean", styleId: "classic" };
     const first = randomCubeAppearance(current, () => 0);
