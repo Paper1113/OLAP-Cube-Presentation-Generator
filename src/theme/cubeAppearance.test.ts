@@ -105,6 +105,15 @@ describe("cube appearance presets", () => {
     expect(normalizeCubeAppearance(undefined)).toEqual(DEFAULT_CUBE_APPEARANCE);
   });
 
+  it("migrates the removed Wireframe style to Handwritten for saved workspaces", () => {
+    const legacy = { paletteId: "coral", styleId: "wireframe" } as unknown as CubeAppearance;
+
+    expect(normalizeCubeAppearance(legacy)).toEqual({
+      paletteId: "coral",
+      styleId: "handwritten",
+    });
+  });
+
   it("resolves visibly different handwritten and bold treatments", () => {
     const handwritten = resolveCubeVisualTheme({ paletteId: "rose", styleId: "handwritten" });
     const bold = resolveCubeVisualTheme({ paletteId: "rose", styleId: "bold" });

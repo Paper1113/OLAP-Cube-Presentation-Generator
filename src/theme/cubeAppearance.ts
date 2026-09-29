@@ -80,6 +80,10 @@ export const DEFAULT_CUBE_APPEARANCE: CubeAppearance = {
   styleId: "classic",
 };
 
+const legacyStyleMigrations: Record<string, CubeDrawingStyleId> = {
+  wireframe: "handwritten",
+};
+
 const clamp = (value: number): number => Math.max(0, Math.min(1, value));
 
 const mixHex = (base: string, mixWith: string, ratio: number): string => {
@@ -102,8 +106,10 @@ export const normalizeCubeAppearance = (
   const paletteId = cubePalettes.some((palette) => palette.id === appearance?.paletteId)
     ? appearance!.paletteId!
     : DEFAULT_CUBE_APPEARANCE.paletteId;
-  const styleId = cubeDrawingStyles.some((style) => style.id === appearance?.styleId)
-    ? appearance!.styleId!
+  const requestedStyleId = (appearance as { styleId?: string } | null | undefined)?.styleId;
+  const migratedStyleId = legacyStyleMigrations[requestedStyleId ?? ""] ?? requestedStyleId;
+  const styleId = cubeDrawingStyles.some((style) => style.id === migratedStyleId)
+    ? migratedStyleId as CubeDrawingStyleId
     : DEFAULT_CUBE_APPEARANCE.styleId;
   return { paletteId, styleId };
 };
