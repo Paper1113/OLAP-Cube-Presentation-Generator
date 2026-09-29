@@ -39,6 +39,35 @@ export const defaultCubeGeometryOptions: CubeGeometryOptions = {
   fontSize: 13,
 };
 
+const maxMemberLabelLength = 16;
+const memberLabelCharacterWidth = 7.5;
+const axisTitleCharacterWidth = 9;
+const axisTitleRightPadding = 24;
+
+/** Conservative SVG text-width estimates used to keep labels inside the viewBox. */
+export const estimateCubeMemberLabelWidth = (label: string): number =>
+  Math.ceil(Math.min(label.length, maxMemberLabelLength) * memberLabelCharacterWidth);
+
+export const estimateCubeAxisTitleWidth = (title: string): number =>
+  Math.ceil(title.length * axisTitleCharacterWidth);
+
+export const getCubeZAxisTitleX = (
+  view: Pick<CubeViewModel, "z">,
+  originX: number,
+  depthX: number,
+): number => {
+  const zCount = Math.max(1, view.z.members.length);
+  const zEndX = originX + zCount * depthX + 13;
+  const lastZMemberIndex = Math.max(0, view.z.members.length - 1);
+  const finalZLabelX = originX + lastZMemberIndex * depthX + 3;
+  const finalZLabel = view.z.members[lastZMemberIndex]?.label ?? "";
+
+  return Math.max(
+    zEndX + 8,
+    finalZLabelX + estimateCubeMemberLabelWidth(finalZLabel) + 12,
+  );
+};
+
 export const createCubeGeometry = (
   view: CubeViewModel,
   overrides: Partial<CubeGeometryOptions> = {},
@@ -67,9 +96,12 @@ export const createCubeGeometry = (
     });
   });
 
+  const zAxisTitle = `${view.z.dimensionName} · ${view.z.levelName} ↗`;
+  const zAxisTitleX = getCubeZAxisTitleX(view, originX, options.depthX);
   const width = Math.max(
     520,
     originX + view.x.members.length * xStep + view.z.members.length * options.depthX + 90,
+    zAxisTitleX + estimateCubeAxisTitleWidth(zAxisTitle) + axisTitleRightPadding,
   );
   const height = Math.max(360, originY + view.y.members.length * yStep + 118);
   return { options, originX, originY, cells, width, height, viewBox: `0 0 ${width} ${height}` };

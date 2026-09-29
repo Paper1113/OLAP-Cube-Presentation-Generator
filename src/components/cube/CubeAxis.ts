@@ -1,5 +1,5 @@
 import type { CubeAxisView } from "../../models/cube";
-import type { CubeGeometry } from "../../engine/cubeGeometry";
+import { getCubeZAxisTitleX, type CubeGeometry } from "../../engine/cubeGeometry";
 import type { ResolvedCubeTheme } from "../../theme/cubeAppearance";
 import { escapeSvgText, shortenLabel } from "./CubeLabels";
 
@@ -18,16 +18,7 @@ export const cubeAxesMarkup = (
   const zEndY = originY - Math.max(1, view.z.members.length) * options.depthY - 13;
   // Keep the rotated Y-axis title outside the widest shortened member label.
   const yAxisTitleX = Math.max(24, originX - 106);
-  const lastZMemberIndex = Math.max(0, view.z.members.length - 1);
-  const finalZLabel = shortenLabel(view.z.members[lastZMemberIndex]?.label ?? "");
-  const finalZLabelX = originX + lastZMemberIndex * options.depthX + 3;
-  // SVG text width depends on the active font, so reserve a conservative width
-  // for the final label before placing the Z-axis title.
-  const estimatedFinalZLabelWidth = Math.ceil(finalZLabel.length * 7.5);
-  const zAxisTitleX = Math.max(
-    zEndX + 8,
-    finalZLabelX + estimatedFinalZLabelWidth + 12,
-  );
+  const zAxisTitleX = getCubeZAxisTitleX(view, originX, options.depthX);
   const axisDash = theme.axisStrokeDasharray ? ` stroke-dasharray="${theme.axisStrokeDasharray}"` : "";
   const lineCap = theme.strokeLinecap ? ` stroke-linecap="${theme.strokeLinecap}"` : "";
   const lineJoin = theme.strokeLinejoin ? ` stroke-linejoin="${theme.strokeLinejoin}"` : "";

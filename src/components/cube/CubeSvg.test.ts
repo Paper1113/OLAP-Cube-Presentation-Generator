@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { createCubeView } from "../../engine/cubeEngine";
-import { createCubeGeometry } from "../../engine/cubeGeometry";
+import {
+  createCubeGeometry,
+  estimateCubeAxisTitleWidth,
+  getCubeZAxisTitleX,
+} from "../../engine/cubeGeometry";
 import { generateIndustryWorkspace } from "../../generator/datasetGenerator";
 import { resolveCubeVisualTheme } from "../../theme/cubeAppearance";
 import { createCubeSvgMarkup } from "./CubeSvg";
@@ -67,15 +71,56 @@ describe("cube SVG layout", () => {
     const view = result.view!;
     const geometry = createCubeGeometry(view);
     const svg = createCubeSvgMarkup(view);
-    const lastZMemberIndex = view.z.members.length - 1;
-    const finalZLabel = view.z.members[lastZMemberIndex].label;
-    const finalZLabelX = geometry.originX + lastZMemberIndex * geometry.options.depthX + 3;
-    const expectedZAxisTitleX = Math.max(
-      geometry.originX + Math.max(1, view.z.members.length) * geometry.options.depthX + 21,
-      finalZLabelX + Math.ceil(Math.min(finalZLabel.length, 16) * 7.5) + 12,
-    );
+    const expectedZAxisTitleX = getCubeZAxisTitleX(view, geometry.originX, geometry.options.depthX);
 
     expect(svg).toContain(`<text x="${expectedZAxisTitleX}"`);
+  });
+
+  it("expands the viewBox for a long final Z label and axis title", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "ViewBox sample",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.5,
+    });
+    const result = createCubeView(workspace.dataset, {
+      axisMapping: workspace.axisMapping,
+      activeLevels: workspace.activeLevels,
+      operation: { type: "original" },
+    });
+    const baseView = result.view!;
+    const view = {
+      ...baseView,
+      cells: [],
+      x: {
+        ...baseView.x,
+        members: baseView.x.members.slice(0, 1),
+      },
+      z: {
+        ...baseView.z,
+        members: Array.from({ length: 8 }, (_, index) => ({
+          id: `stress-city-${index}`,
+          label: index === 7 ? "abcdefghijklmnop" : `City ${index}`,
+        })),
+      },
+    };
+    const geometry = createCubeGeometry(view);
+    const svg = createCubeSvgMarkup(view);
+    const zAxisTitle = `${view.z.dimensionName} · ${view.z.levelName} ↗`;
+    const zAxisTitleX = getCubeZAxisTitleX(view, geometry.originX, geometry.options.depthX);
+    const legacyWidth = Math.max(
+      520,
+      geometry.originX
+        + view.x.members.length * (geometry.options.cellWidth + geometry.options.spacing)
+        + view.z.members.length * geometry.options.depthX
+        + 90,
+    );
+
+    expect(geometry.width).toBeGreaterThan(legacyWidth);
+    expect(geometry.width).toBeGreaterThanOrEqual(
+      zAxisTitleX + estimateCubeAxisTitleWidth(zAxisTitle) + 24,
+    );
+    expect(svg).toContain(`viewBox="${geometry.viewBox}"`);
   });
 
   it("applies the selected palette and drawing style to SVG output", () => {
