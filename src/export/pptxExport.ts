@@ -8,6 +8,10 @@ import type {
   OperationSettings,
   OperationType,
 } from "../models/operation";
+import {
+  normalizeCubeAppearance,
+  type CubeAppearance,
+} from "../theme/cubeAppearance";
 import { blobToDataUri, svgToPng } from "./pngExport";
 import { svgToDataUri } from "./svgExport";
 
@@ -16,6 +20,7 @@ export interface PresentationInput {
   axisMapping: AxisMapping;
   activeLevels: Record<string, string>;
   operations: OperationSettings;
+  appearance?: CubeAppearance;
 }
 
 export type PresentationSlideKind = "title" | OperationType;
@@ -268,6 +273,7 @@ const addCubeSlide = async (
   slideModel: PresentationSlideModel,
   totalSlides: number,
   imageFormat: "svg" | "png",
+  appearance: CubeAppearance,
 ): Promise<void> => {
   const slide = pptx.addSlide();
   slide.background = { color: "FFFFFF" };
@@ -284,7 +290,7 @@ const addCubeSlide = async (
   });
 
   if (slideModel.view) {
-    const svgMarkup = createCubeSvgMarkup(slideModel.view, { includeTitle: false });
+    const svgMarkup = createCubeSvgMarkup(slideModel.view, { includeTitle: false, appearance });
     slide.addImage({
       data: await diagramData(svgMarkup, imageFormat),
       ...diagramBox(svgMarkup),
@@ -337,9 +343,10 @@ export const exportPresentation = async (
     bodyFontFace: "Aptos",
   };
 
+  const appearance = normalizeCubeAppearance(options.appearance);
   addTitleSlide(pptx, slides[0], slides.length);
   for (const slideModel of slides.slice(1)) {
-    await addCubeSlide(pptx, slideModel, slides.length, options.imageFormat ?? "svg");
+    await addCubeSlide(pptx, slideModel, slides.length, options.imageFormat ?? "svg", appearance);
   }
 
   await pptx.writeFile({ fileName: safePptxFilename(options.dataset.title, options.filename) });

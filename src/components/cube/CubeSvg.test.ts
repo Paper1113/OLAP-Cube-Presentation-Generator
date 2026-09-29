@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createCubeView } from "../../engine/cubeEngine";
 import { createCubeGeometry } from "../../engine/cubeGeometry";
 import { generateIndustryWorkspace } from "../../generator/datasetGenerator";
+import { resolveCubeVisualTheme } from "../../theme/cubeAppearance";
 import { createCubeSvgMarkup } from "./CubeSvg";
 
 describe("cube SVG layout", () => {
@@ -28,6 +29,28 @@ describe("cube SVG layout", () => {
     expect(zAxisTitleY).toBeGreaterThan(80);
     expect(svg).toContain(`y="${zAxisTitleY}"`);
     expect(svg).toContain("Location · City");
+  });
+
+  it("applies the selected palette and drawing style to SVG output", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "Styled sample",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.5,
+    });
+    const result = createCubeView(workspace.dataset, {
+      axisMapping: workspace.axisMapping,
+      activeLevels: workspace.activeLevels,
+      operation: { type: "original" },
+    });
+    const appearance = { paletteId: "coral", styleId: "bold" } as const;
+    const theme = resolveCubeVisualTheme(appearance);
+    const svg = createCubeSvgMarkup(result.view!, { appearance });
+
+    expect(svg).toContain(`fill="${theme.frontFill}"`);
+    expect(svg).toContain(`stroke="${theme.stroke}"`);
+    expect(svg).toContain(`stroke-width="${theme.strokeWidth}"`);
+    expect(svg).toContain(`fill="${theme.markerFill}"`);
   });
 
   it("keeps title-free diagrams compact for presentation exports", () => {

@@ -2,6 +2,7 @@ import type { CubeDataset, FactRecord } from "../models/cube";
 import type { Dimension } from "../models/dimension";
 import type { WorkspaceState } from "../models/operation";
 import { orderedLevels } from "../engine/hierarchy";
+import { normalizeCubeAppearance, type CubeAppearance } from "../theme/cubeAppearance";
 import { getIndustryTemplate, type IndustryTemplate } from "./industryTemplates";
 import { generateSalesValue } from "./salesGenerator";
 
@@ -10,6 +11,7 @@ export interface GenerateDatasetOptions {
   industryId: string;
   year?: number;
   random?: () => number;
+  appearance?: CubeAppearance;
 }
 
 const months = [
@@ -158,6 +160,7 @@ export const generateIndustryWorkspace = ({
   industryId,
   year = new Date().getFullYear(),
   random = Math.random,
+  appearance,
 }: GenerateDatasetOptions): WorkspaceState => {
   const template = getIndustryTemplate(industryId);
   if (!template) throw new Error(`Unknown industry preset: ${industryId}`);
@@ -195,6 +198,7 @@ export const generateIndustryWorkspace = ({
       rollup: { dimensionId: "location", targetLevelId: "location-country" },
       drilldown: { dimensionId: "time", targetLevelId: "time-month" },
     },
+    appearance: normalizeCubeAppearance(appearance),
     generation: { industryId: template.id, selectedIndustryId: template.id, generated: true },
   };
 };

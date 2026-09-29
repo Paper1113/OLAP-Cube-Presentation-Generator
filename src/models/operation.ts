@@ -1,3 +1,5 @@
+import type { CubeAppearance } from "../theme/cubeAppearance";
+
 export type OperationType = "original" | "slice" | "dice" | "rollup" | "drilldown";
 
 export interface AxisMapping {
@@ -62,5 +64,7 @@ export interface WorkspaceState {
   axisMapping: AxisMapping;
   activeLevels: Record<string, string>;
   operations: OperationSettings;
+  /** Optional for backward compatibility with workspaces saved before appearance controls existed. */
+  appearance?: CubeAppearance;
   generation?: WorkspaceGenerationMetadata;
 }
