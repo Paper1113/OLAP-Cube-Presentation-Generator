@@ -52,6 +52,32 @@ describe("cube SVG layout", () => {
     expect(svg).toContain(`rotate(-90 24`);
   });
 
+  it("keeps the final Z member label clear of the Z-axis title", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "Layout sample",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.5,
+    });
+    const result = createCubeView(workspace.dataset, {
+      axisMapping: workspace.axisMapping,
+      activeLevels: workspace.activeLevels,
+      operation: { type: "original" },
+    });
+    const view = result.view!;
+    const geometry = createCubeGeometry(view);
+    const svg = createCubeSvgMarkup(view);
+    const lastZMemberIndex = view.z.members.length - 1;
+    const finalZLabel = view.z.members[lastZMemberIndex].label;
+    const finalZLabelX = geometry.originX + lastZMemberIndex * geometry.options.depthX + 3;
+    const expectedZAxisTitleX = Math.max(
+      geometry.originX + Math.max(1, view.z.members.length) * geometry.options.depthX + 21,
+      finalZLabelX + Math.ceil(Math.min(finalZLabel.length, 16) * 7.5) + 12,
+    );
+
+    expect(svg).toContain(`<text x="${expectedZAxisTitleX}"`);
+  });
+
   it("applies the selected palette and drawing style to SVG output", () => {
     const workspace = generateIndustryWorkspace({
       title: "Styled sample",

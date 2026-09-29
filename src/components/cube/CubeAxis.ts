@@ -18,6 +18,16 @@ export const cubeAxesMarkup = (
   const zEndY = originY - Math.max(1, view.z.members.length) * options.depthY - 13;
   // Keep the rotated Y-axis title outside the widest shortened member label.
   const yAxisTitleX = Math.max(24, originX - 106);
+  const lastZMemberIndex = Math.max(0, view.z.members.length - 1);
+  const finalZLabel = shortenLabel(view.z.members[lastZMemberIndex]?.label ?? "");
+  const finalZLabelX = originX + lastZMemberIndex * options.depthX + 3;
+  // SVG text width depends on the active font, so reserve a conservative width
+  // for the final label before placing the Z-axis title.
+  const estimatedFinalZLabelWidth = Math.ceil(finalZLabel.length * 7.5);
+  const zAxisTitleX = Math.max(
+    zEndX + 8,
+    finalZLabelX + estimatedFinalZLabelWidth + 12,
+  );
   const axisDash = theme.axisStrokeDasharray ? ` stroke-dasharray="${theme.axisStrokeDasharray}"` : "";
   const lineCap = theme.strokeLinecap ? ` stroke-linecap="${theme.strokeLinecap}"` : "";
   const lineJoin = theme.strokeLinejoin ? ` stroke-linejoin="${theme.strokeLinejoin}"` : "";
@@ -42,6 +52,6 @@ export const cubeAxesMarkup = (
   <g font-family="${fontFamily}" font-size="14" font-weight="700" fill="${theme.axisTitle}">
     <text x="${(originX + xEnd) / 2}" y="${xBottom + 54}" text-anchor="middle">${escapeSvgText(`${view.x.dimensionName} · ${view.x.levelName}`)} →</text>
     <text x="${yAxisTitleX}" y="${(originY + yStart) / 2}" text-anchor="middle" transform="rotate(-90 ${yAxisTitleX} ${(originY + yStart) / 2})">${escapeSvgText(`${view.y.dimensionName} · ${view.y.levelName}`)} ↑</text>
-    <text x="${zEndX + 8}" y="${zEndY - 5}" text-anchor="start">${escapeSvgText(`${view.z.dimensionName} · ${view.z.levelName}`)} ↗</text>
+    <text x="${zAxisTitleX}" y="${zEndY - 5}" text-anchor="start">${escapeSvgText(`${view.z.dimensionName} · ${view.z.levelName}`)} ↗</text>
   </g>`;
 };
