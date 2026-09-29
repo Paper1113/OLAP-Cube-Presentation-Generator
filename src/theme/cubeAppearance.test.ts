@@ -60,6 +60,25 @@ describe("cube appearance presets", () => {
     });
   });
 
+  it("keeps all rendered theme text and structural graphics readable", () => {
+    cubePalettes.forEach((palette) => {
+      cubeDrawingStyles.forEach((style) => {
+        const theme = resolveCubeVisualTheme({ paletteId: palette.id, styleId: style.id });
+
+        expect(contrastRatio(theme.titleFill, theme.background)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(theme.subtitleFill, theme.background)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(theme.memberText, theme.background)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(theme.axisTitle, theme.background)).toBeGreaterThanOrEqual(4.5);
+        expect(contrastRatio(theme.markerFill, theme.background)).toBeGreaterThanOrEqual(3);
+        expect(contrastRatio(theme.axisStroke, theme.background)).toBeGreaterThanOrEqual(3);
+        expect(contrastRatio(theme.stroke, theme.background)).toBeGreaterThanOrEqual(3);
+
+        const valueBackground = theme.frontFill === "none" ? theme.background : theme.frontFill;
+        expect(contrastRatio(theme.valueFill, valueBackground)).toBeGreaterThanOrEqual(4.5);
+      });
+    });
+  });
+
   it("randomizes both palette and style away from the current appearance", () => {
     const current: CubeAppearance = { paletteId: "ocean", styleId: "classic" };
     const first = randomCubeAppearance(current, () => 0);
