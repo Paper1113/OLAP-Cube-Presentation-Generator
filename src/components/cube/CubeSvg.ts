@@ -42,13 +42,14 @@ export const createCubeSvgMarkup = (view: CubeViewModel, options: CubeSvgOptions
     return cellGeometry ? cubeCellMarkup(cell, cellGeometry, geometry.options, view.measure.name, theme) : "";
   }).join("");
   const title = `${view.operationLabel}: ${view.datasetTitle}`;
+  const fontFamily = escapeSvgText(theme.fontFamily);
 
   return `<svg${options.id ? ` id="${escapeSvgText(options.id)}"` : ""} xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="cube-title cube-description" viewBox="${geometry.viewBox}" width="${geometry.width}" height="${geometry.height}">
     <title id="cube-title">${escapeSvgText(title)}</title>
     <desc id="cube-description">${escapeSvgText(view.description)}</desc>
     <rect width="100%" height="100%" fill="${theme.background}" />
     <defs><marker id="axis-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="${theme.markerFill}" /></marker></defs>
-    ${includeTitle ? `<text x="24" y="34" font-family="Aptos, Arial, sans-serif" font-size="19" font-weight="700" fill="${theme.titleFill}">${escapeSvgText(view.operationLabel)}</text><text x="24" y="56" font-family="Aptos, Arial, sans-serif" font-size="12" fill="${theme.subtitleFill}">${escapeSvgText(`${view.datasetTitle} · ${view.measure.name} (SUM)`)}</text>` : ""}
+    ${includeTitle ? `<text x="24" y="34" font-family="${fontFamily}" font-size="19" font-weight="700" fill="${theme.titleFill}">${escapeSvgText(view.operationLabel)}</text><text x="24" y="56" font-family="${fontFamily}" font-size="12" fill="${theme.subtitleFill}">${escapeSvgText(`${view.datasetTitle} · ${view.measure.name} (SUM)`)}</text>` : ""}
     ${cellsMarkup}
     ${cubeAxesMarkup(view, geometry, theme)}
   </svg>`;

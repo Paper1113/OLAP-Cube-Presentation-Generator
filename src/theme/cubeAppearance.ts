@@ -8,7 +8,7 @@ export type CubePaletteId =
   | "slate"
   | "coral";
 
-export type CubeDrawingStyleId = "classic" | "minimal" | "wireframe" | "bold";
+export type CubeDrawingStyleId = "classic" | "minimal" | "handwritten" | "bold";
 
 export interface CubeAppearance {
   paletteId: CubePaletteId;
@@ -52,6 +52,9 @@ export interface ResolvedCubeTheme {
   titleFill: string;
   subtitleFill: string;
   markerFill: string;
+  fontFamily: string;
+  strokeLinecap?: "round" | "square" | "butt";
+  strokeLinejoin?: "round" | "bevel" | "miter";
 }
 
 export const cubePalettes: readonly CubePaletteDefinition[] = [
@@ -68,7 +71,7 @@ export const cubePalettes: readonly CubePaletteDefinition[] = [
 export const cubeDrawingStyles: readonly CubeDrawingStyleDefinition[] = [
   { id: "classic", label: "Classic", description: "Filled isometric faces with balanced outlines." },
   { id: "minimal", label: "Minimal", description: "Light surfaces, fine strokes, and a cleaner presentation look." },
-  { id: "wireframe", label: "Wireframe", description: "Outline-first technical styling with dashed depth faces." },
+  { id: "handwritten", label: "Handwritten", description: "Rounded sketch-like lines and casual handwritten lettering." },
   { id: "bold", label: "Bold", description: "Saturated front faces, stronger contrast, and heavier outlines." },
 ];
 
@@ -151,6 +154,7 @@ export const resolveCubeVisualTheme = (
     memberText: mediumDark,
     axisTitle: dark,
     markerFill: mediumDark,
+    fontFamily: "Aptos, Arial, sans-serif",
   };
 
   switch (normalized.styleId) {
@@ -167,23 +171,21 @@ export const resolveCubeVisualTheme = (
         axisStroke: mediumDark,
         axisStrokeWidth: 1.1,
       };
-    case "wireframe":
+    case "handwritten":
       return {
         ...shared,
-        frontFill: "none",
-        topFill: "none",
-        rightFill: "none",
-        emptyFrontFill: "none",
-        emptyTopFill: "none",
-        emptyRightFill: "none",
-        stroke: mediumDark,
-        strokeWidth: 1.65,
-        sideStrokeDasharray: "4 2",
+        frontFill: mixHex(palette.primary, "#ffffff", 0.84),
+        topFill: mixHex(palette.primary, "#ffffff", 0.94),
+        rightFill: mixHex(palette.primary, "#ffffff", 0.68),
+        stroke: mixHex(palette.primary, "#000000", 0.28),
+        strokeWidth: 1.35,
         valueFill: dark,
-        valueFontWeight: 700,
+        valueFontWeight: 600,
         axisStroke: mediumDark,
-        axisStrokeWidth: 1.45,
-        axisStrokeDasharray: "6 3",
+        axisStrokeWidth: 1.35,
+        fontFamily: "Comic Sans MS, Chalkboard SE, Marker Felt, cursive",
+        strokeLinecap: "round",
+        strokeLinejoin: "round",
       };
     case "bold":
       return {

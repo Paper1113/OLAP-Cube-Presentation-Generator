@@ -128,7 +128,7 @@ This project is licensed under the [MIT License](LICENSE).
 The editor includes presentation-facing appearance controls so different users do not have to produce visually identical cubes.
 
 - Eight preset colour palettes: Ocean, Emerald, Violet, Amber, Rose, Teal, Slate, and Coral.
-- Four drawing styles: **Classic**, **Minimal**, **Wireframe**, and **Bold**.
+- Four drawing styles: **Classic**, **Minimal**, **Handwritten**, and **Bold**.
 - **Random Appearance** chooses a different palette and a different drawing style in one click.
 - Appearance changes apply immediately to the live cube and are also reused by SVG/PNG downloads, presentation preview, and PowerPoint export.
 - Appearance is persisted with the workspace. Older saved workspaces without appearance metadata fall back to Ocean + Classic.

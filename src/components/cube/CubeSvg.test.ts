@@ -31,6 +31,27 @@ describe("cube SVG layout", () => {
     expect(svg).toContain("Location · City");
   });
 
+  it("keeps Z member labels above the cube faces and the Y title left of member labels", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "Layout sample",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.5,
+    });
+    const result = createCubeView(workspace.dataset, {
+      axisMapping: workspace.axisMapping,
+      activeLevels: workspace.activeLevels,
+      operation: { type: "original" },
+    });
+    const view = result.view!;
+    const geometry = createCubeGeometry(view);
+    const svg = createCubeSvgMarkup(view);
+
+    const zLabelY = geometry.originY - geometry.options.depthY - 8;
+    expect(svg).toContain(`y="${zLabelY}"`);
+    expect(svg).toContain(`rotate(-90 24`);
+  });
+
   it("applies the selected palette and drawing style to SVG output", () => {
     const workspace = generateIndustryWorkspace({
       title: "Styled sample",

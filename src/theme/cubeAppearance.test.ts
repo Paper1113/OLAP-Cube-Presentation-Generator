@@ -44,18 +44,16 @@ describe("cube appearance presets", () => {
     });
   });
 
-  it("keeps Minimal and Wireframe graphical outlines at WCAG non-text contrast", () => {
+  it("keeps Minimal and Handwritten graphical outlines at WCAG non-text contrast", () => {
     cubePalettes.forEach((palette) => {
-      (["minimal", "wireframe"] as const).forEach((styleId) => {
+      (["minimal", "handwritten"] as const).forEach((styleId) => {
         const theme = resolveCubeVisualTheme({ paletteId: palette.id, styleId });
         expect(contrastRatio(theme.stroke, theme.background)).toBeGreaterThanOrEqual(3);
         expect(contrastRatio(theme.axisStroke, theme.background)).toBeGreaterThanOrEqual(3);
 
-        if (styleId === "minimal") {
-          expect(contrastRatio(theme.stroke, theme.frontFill)).toBeGreaterThanOrEqual(3);
-          expect(contrastRatio(theme.stroke, theme.topFill)).toBeGreaterThanOrEqual(3);
-          expect(contrastRatio(theme.stroke, theme.rightFill)).toBeGreaterThanOrEqual(3);
-        }
+        expect(contrastRatio(theme.stroke, theme.frontFill)).toBeGreaterThanOrEqual(3);
+        expect(contrastRatio(theme.stroke, theme.topFill)).toBeGreaterThanOrEqual(3);
+        expect(contrastRatio(theme.stroke, theme.rightFill)).toBeGreaterThanOrEqual(3);
       });
     });
   });
@@ -107,14 +105,16 @@ describe("cube appearance presets", () => {
     expect(normalizeCubeAppearance(undefined)).toEqual(DEFAULT_CUBE_APPEARANCE);
   });
 
-  it("resolves visibly different wireframe and bold treatments", () => {
-    const wireframe = resolveCubeVisualTheme({ paletteId: "rose", styleId: "wireframe" });
+  it("resolves visibly different handwritten and bold treatments", () => {
+    const handwritten = resolveCubeVisualTheme({ paletteId: "rose", styleId: "handwritten" });
     const bold = resolveCubeVisualTheme({ paletteId: "rose", styleId: "bold" });
 
-    expect(wireframe.frontFill).toBe("none");
-    expect(wireframe.sideStrokeDasharray).toBe("4 2");
+    expect(handwritten.frontFill).not.toBe("none");
+    expect(handwritten.fontFamily).toContain("cursive");
+    expect(handwritten.strokeLinecap).toBe("round");
+    expect(handwritten.strokeLinejoin).toBe("round");
     expect(bold.frontFill).toBe(bold.palette.primary);
     expect(bold.valueFill).toBe(bold.palette.onPrimary);
-    expect(bold.strokeWidth).toBeGreaterThan(wireframe.strokeWidth);
+    expect(bold.strokeWidth).toBeGreaterThan(handwritten.strokeWidth);
   });
 });
