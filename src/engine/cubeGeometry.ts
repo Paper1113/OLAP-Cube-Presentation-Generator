@@ -9,6 +9,7 @@ export interface CubeGeometryOptions {
   depthY: number;
   spacing: number;
   fontSize: number;
+  fontFamily: string;
 }
 
 export interface CubeCellGeometry {
@@ -37,34 +38,66 @@ export const defaultCubeGeometryOptions: CubeGeometryOptions = {
   depthY: 23,
   spacing: 5,
   fontSize: 13,
+  fontFamily: "Aptos, Arial, sans-serif",
 };
 
 const maxMemberLabelLength = 16;
-const memberLabelCharacterWidth = 7.5;
-const axisTitleCharacterWidth = 9;
+const memberLabelFontSize = 12;
+const axisTitleFontSize = 14;
+const axisTitleFontWeight = 700;
 const axisTitleRightPadding = 24;
 
-/** Conservative SVG text-width estimates used to keep labels inside the viewBox. */
-export const estimateCubeMemberLabelWidth = (label: string): number =>
-  Math.ceil(Math.min(label.length, maxMemberLabelLength) * memberLabelCharacterWidth);
+export interface CubeTextMeasureOptions {
+  fontFamily: string;
+  fontSize: number;
+  fontWeight?: number;
+}
 
-export const estimateCubeAxisTitleWidth = (title: string): number =>
-  Math.ceil(title.length * axisTitleCharacterWidth);
+const shortenMemberLabel = (label: string): string =>
+  label.length > maxMemberLabelLength ? `${label.slice(0, maxMemberLabelLength - 1)}…` : label;
+
+const fallbackTextWidth = (text: string, fontSize: number): number =>
+  Array.from(text).length * fontSize;
+
+/** Measure the same font used by the SVG, with a conservative non-DOM fallback for tests. */
+export const measureCubeTextWidth = (
+  text: string,
+  { fontFamily, fontSize, fontWeight = 400 }: CubeTextMeasureOptions,
+): number => {
+  const fallback = fallbackTextWidth(text, fontSize);
+  if (typeof document === "undefined") return fallback;
+
+  try {
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    if (!context) return fallback;
+
+    context.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
+    const measured = context.measureText(text).width;
+    return Number.isFinite(measured) ? Math.ceil(measured + 1) : fallback;
+  } catch {
+    return fallback;
+  }
+};
 
 export const getCubeZAxisTitleX = (
   view: Pick<CubeViewModel, "z">,
   originX: number,
-  depthX: number,
+  options: Pick<CubeGeometryOptions, "depthX" | "fontFamily">,
 ): number => {
   const zCount = Math.max(1, view.z.members.length);
-  const zEndX = originX + zCount * depthX + 13;
+  const zEndX = originX + zCount * options.depthX + 13;
   const lastZMemberIndex = Math.max(0, view.z.members.length - 1);
-  const finalZLabelX = originX + lastZMemberIndex * depthX + 3;
-  const finalZLabel = view.z.members[lastZMemberIndex]?.label ?? "";
+  const finalZLabelX = originX + lastZMemberIndex * options.depthX + 3;
+  const finalZLabel = shortenMemberLabel(view.z.members[lastZMemberIndex]?.label ?? "");
+  const finalZLabelWidth = measureCubeTextWidth(finalZLabel, {
+    fontFamily: options.fontFamily,
+    fontSize: memberLabelFontSize,
+  });
 
   return Math.max(
     zEndX + 8,
-    finalZLabelX + estimateCubeMemberLabelWidth(finalZLabel) + 12,
+    finalZLabelX + finalZLabelWidth + 12,
   );
 };
 
@@ -97,11 +130,16 @@ export const createCubeGeometry = (
   });
 
   const zAxisTitle = `${view.z.dimensionName} · ${view.z.levelName} ↗`;
-  const zAxisTitleX = getCubeZAxisTitleX(view, originX, options.depthX);
+  const zAxisTitleX = getCubeZAxisTitleX(view, originX, options);
+  const zAxisTitleWidth = measureCubeTextWidth(zAxisTitle, {
+    fontFamily: options.fontFamily,
+    fontSize: axisTitleFontSize,
+    fontWeight: axisTitleFontWeight,
+  });
   const width = Math.max(
     520,
     originX + view.x.members.length * xStep + view.z.members.length * options.depthX + 90,
-    zAxisTitleX + estimateCubeAxisTitleWidth(zAxisTitle) + axisTitleRightPadding,
+    zAxisTitleX + zAxisTitleWidth + axisTitleRightPadding,
   );
   const height = Math.max(360, originY + view.y.members.length * yStep + 118);
   return { options, originX, originY, cells, width, height, viewBox: `0 0 ${width} ${height}` };

@@ -21,6 +21,7 @@ export const createCubeSvgMarkup = (view: CubeViewModel, options: CubeSvgOptions
   const geometry = createCubeGeometry(view, {
     ...options.geometry,
     ...(!includeTitle && options.geometry?.topPadding === undefined ? { topPadding: 100 } : {}),
+    fontFamily: theme.fontFamily,
   });
   const geometryByCoordinate = new Map(
     geometry.cells.map((cell) => [`${cell.xIndex}:${cell.yIndex}:${cell.zIndex}`, cell]),

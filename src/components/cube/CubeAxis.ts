@@ -18,7 +18,7 @@ export const cubeAxesMarkup = (
   const zEndY = originY - Math.max(1, view.z.members.length) * options.depthY - 13;
   // Keep the rotated Y-axis title outside the widest shortened member label.
   const yAxisTitleX = Math.max(24, originX - 106);
-  const zAxisTitleX = getCubeZAxisTitleX(view, originX, options.depthX);
+  const zAxisTitleX = getCubeZAxisTitleX(view, originX, options);
   const axisDash = theme.axisStrokeDasharray ? ` stroke-dasharray="${theme.axisStrokeDasharray}"` : "";
   const lineCap = theme.strokeLinecap ? ` stroke-linecap="${theme.strokeLinecap}"` : "";
   const lineJoin = theme.strokeLinejoin ? ` stroke-linejoin="${theme.strokeLinejoin}"` : "";

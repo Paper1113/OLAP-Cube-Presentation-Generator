@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { createCubeView } from "../../engine/cubeEngine";
 import {
   createCubeGeometry,
-  estimateCubeAxisTitleWidth,
   getCubeZAxisTitleX,
+  measureCubeTextWidth,
 } from "../../engine/cubeGeometry";
 import { generateIndustryWorkspace } from "../../generator/datasetGenerator";
 import { resolveCubeVisualTheme } from "../../theme/cubeAppearance";
@@ -71,12 +71,12 @@ describe("cube SVG layout", () => {
     const view = result.view!;
     const geometry = createCubeGeometry(view);
     const svg = createCubeSvgMarkup(view);
-    const expectedZAxisTitleX = getCubeZAxisTitleX(view, geometry.originX, geometry.options.depthX);
+    const expectedZAxisTitleX = getCubeZAxisTitleX(view, geometry.originX, geometry.options);
 
     expect(svg).toContain(`<text x="${expectedZAxisTitleX}"`);
   });
 
-  it("expands the viewBox for a long final Z label and axis title", () => {
+  it("measures wide glyphs before placing the final Z label and axis title", () => {
     const workspace = generateIndustryWorkspace({
       title: "ViewBox sample",
       industryId: "furniture-home",
@@ -98,16 +98,23 @@ describe("cube SVG layout", () => {
       },
       z: {
         ...baseView.z,
+        dimensionName: "地域",
+        levelName: "都市",
         members: Array.from({ length: 8 }, (_, index) => ({
           id: `stress-city-${index}`,
-          label: index === 7 ? "abcdefghijklmnop" : `City ${index}`,
+          label: index === 7 ? "界界界界界界界界界界界界界界界界" : `City ${index}`,
         })),
       },
     };
     const geometry = createCubeGeometry(view);
     const svg = createCubeSvgMarkup(view);
     const zAxisTitle = `${view.z.dimensionName} · ${view.z.levelName} ↗`;
-    const zAxisTitleX = getCubeZAxisTitleX(view, geometry.originX, geometry.options.depthX);
+    const zAxisTitleX = getCubeZAxisTitleX(view, geometry.originX, geometry.options);
+    const zAxisTitleWidth = measureCubeTextWidth(zAxisTitle, {
+      fontFamily: geometry.options.fontFamily,
+      fontSize: 14,
+      fontWeight: 700,
+    });
     const legacyWidth = Math.max(
       520,
       geometry.originX
@@ -118,7 +125,7 @@ describe("cube SVG layout", () => {
 
     expect(geometry.width).toBeGreaterThan(legacyWidth);
     expect(geometry.width).toBeGreaterThanOrEqual(
-      zAxisTitleX + estimateCubeAxisTitleWidth(zAxisTitle) + 24,
+      zAxisTitleX + zAxisTitleWidth + 24,
     );
     expect(svg).toContain(`viewBox="${geometry.viewBox}"`);
   });
