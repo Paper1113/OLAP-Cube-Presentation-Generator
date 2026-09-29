@@ -147,7 +147,7 @@ export const resolveCubeVisualTheme = (
     emptyRightFill: "#e8edf0",
     emptyValueFill: "#60717b",
     titleFill: dark,
-    subtitleFill: mixHex(dark, "#ffffff", 0.22),
+    subtitleFill: mixHex(dark, "#ffffff", 0.18),
     memberText: mediumDark,
     axisTitle: dark,
     markerFill: mediumDark,

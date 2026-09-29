@@ -37,6 +37,13 @@ describe("cube appearance presets", () => {
     });
   });
 
+  it("keeps subtitle text at WCAG AA contrast across every palette", () => {
+    cubePalettes.forEach((palette) => {
+      const theme = resolveCubeVisualTheme({ paletteId: palette.id, styleId: "classic" });
+      expect(contrastRatio(theme.subtitleFill, theme.background)).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
   it("randomizes both palette and style away from the current appearance", () => {
     const current: CubeAppearance = { paletteId: "ocean", styleId: "classic" };
     const first = randomCubeAppearance(current, () => 0);
