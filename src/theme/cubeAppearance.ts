@@ -55,14 +55,14 @@ export interface ResolvedCubeTheme {
 }
 
 export const cubePalettes: readonly CubePaletteDefinition[] = [
-  { id: "ocean", label: "Ocean", primary: "#2f7ea8", onPrimary: "#ffffff" },
+  { id: "ocean", label: "Ocean", primary: "#2f7ea8", onPrimary: "#000000" },
   { id: "emerald", label: "Emerald", primary: "#318267", onPrimary: "#ffffff" },
   { id: "violet", label: "Violet", primary: "#7060a8", onPrimary: "#ffffff" },
   { id: "amber", label: "Amber", primary: "#d18a24", onPrimary: "#17212a" },
-  { id: "rose", label: "Rose", primary: "#bd5b73", onPrimary: "#ffffff" },
-  { id: "teal", label: "Teal", primary: "#2d8585", onPrimary: "#ffffff" },
+  { id: "rose", label: "Rose", primary: "#bd5b73", onPrimary: "#000000" },
+  { id: "teal", label: "Teal", primary: "#2d8585", onPrimary: "#000000" },
   { id: "slate", label: "Slate", primary: "#647180", onPrimary: "#ffffff" },
-  { id: "coral", label: "Coral", primary: "#c9684f", onPrimary: "#ffffff" },
+  { id: "coral", label: "Coral", primary: "#c9684f", onPrimary: "#000000" },
 ];
 
 export const cubeDrawingStyles: readonly CubeDrawingStyleDefinition[] = [
