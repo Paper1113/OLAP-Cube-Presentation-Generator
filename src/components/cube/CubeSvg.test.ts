@@ -76,6 +76,25 @@ describe("cube SVG layout", () => {
     expect(svg.indexOf('class="cube-values"')).toBeGreaterThan(svg.lastIndexOf('class="cube-cell"'));
   });
 
+  it("prevents projected depth labels from overprinting when Time is the Z axis", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "Depth collision sample",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.5,
+    });
+    const result = createCubeView(workspace.dataset, {
+      axisMapping: { x: "product", y: "location", z: "time" },
+      activeLevels: workspace.activeLevels,
+      operation: { type: "original" },
+    });
+    const view = result.view!;
+    const svg = createCubeSvgMarkup(view);
+
+    expect(svg.match(/data-cube-value="true"/g)!.length).toBeLessThan(view.cells.length);
+    expect(svg.match(/<title>/g)).toHaveLength(view.cells.length);
+  });
+
   it("keeps the final Z member label clear of the Z-axis title", () => {
     const workspace = generateIndustryWorkspace({
       title: "Layout sample",
