@@ -82,9 +82,6 @@ const visibleValueCells = (
     const bounds = valueLabelBounds(valueCell, options, theme);
     const collisions = visible.filter((candidate) => boundsOverlap(candidate.bounds, bounds));
     if (collisions.length > 0) {
-      const hasData = valueCell.cell.hasData;
-      const populatedCollision = collisions.find((candidate) => candidate.cell.hasData);
-      if (!hasData && populatedCollision) return;
       for (const collision of collisions) {
         const index = visible.indexOf(collision);
         if (index >= 0) visible.splice(index, 1);

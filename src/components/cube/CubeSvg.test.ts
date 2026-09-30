@@ -95,6 +95,53 @@ describe("cube SVG layout", () => {
     expect(svg.match(/<title>/g)).toHaveLength(view.cells.length);
   });
 
+  it("lets a later empty front cell occlude a colliding rear value", () => {
+    const view = {
+      datasetTitle: "Sparse depth sample",
+      measure: { id: "sales", name: "Sales", aggregation: "sum" as const },
+      x: {
+        dimensionId: "product",
+        dimensionName: "Product",
+        levelId: "product-category",
+        levelName: "Category",
+        members: [{ id: "x0", label: "X0" }, { id: "x1", label: "X1" }],
+      },
+      y: {
+        dimensionId: "location",
+        dimensionName: "Location",
+        levelId: "location-country",
+        levelName: "Country",
+        members: [{ id: "y0", label: "Y0" }, { id: "y1", label: "Y1" }],
+      },
+      z: {
+        dimensionId: "time",
+        dimensionName: "Time",
+        levelId: "time-quarter",
+        levelName: "Quarter",
+        members: [
+          { id: "z0", label: "Z0" },
+          { id: "z1", label: "Z1" },
+          { id: "z2", label: "Z2" },
+          { id: "z3", label: "Z3" },
+        ],
+      },
+      cells: [
+        { xMemberId: "x0", yMemberId: "y1", zMemberId: "z3", value: 999, hasData: true },
+        { xMemberId: "x1", yMemberId: "y0", zMemberId: "z0", value: 0, hasData: false },
+      ],
+      operationLabel: "Original OLAP Cube",
+      description: "Sparse depth sample.",
+    };
+    const svg = createCubeSvgMarkup(view);
+
+    expect(svg.match(/data-cube-value="true"/g)).toHaveLength(1);
+    expect(svg).toContain('data-cube-value="true"');
+    expect(svg).toContain(">—</text>");
+    expect(svg).not.toContain('data-cube-value="true" data-depth-index="3"');
+    expect(svg).toContain("Sales: 999");
+    expect(svg).toContain("No fact data");
+  });
+
   it("keeps the final Z member label clear of the Z-axis title", () => {
     const workspace = generateIndustryWorkspace({
       title: "Layout sample",
