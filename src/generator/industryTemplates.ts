@@ -38,6 +38,18 @@ export interface IndustryTemplate {
 const retailSeasonality = [0.86, 0.88, 0.93, 0.95, 0.98, 1, 0.96, 0.97, 1.01, 1.06, 1.15, 1.25];
 const steadySeasonality = [0.95, 0.96, 0.98, 1, 1.01, 1.02, 1, 0.99, 1, 1.02, 1.04, 1.03];
 
+/** Product and Location source data for the built-in default sample. */
+export const defaultProductCategories: IndustryProductCategory[] = [
+  { id: "living-room", label: "Living Room", products: [{ id: "sofa", label: "Sofa" }, { id: "armchair", label: "Armchair" }] },
+  { id: "bedroom", label: "Bedroom", products: [{ id: "bed-frame", label: "Bed Frame" }] },
+  { id: "storage", label: "Storage", products: [{ id: "bookcase", label: "Bookcase" }] },
+];
+
+export const defaultLocationCountries: IndustryCountry[] = [
+  { id: "australia", label: "Australia", cities: [{ id: "sydney", label: "Sydney" }, { id: "perth", label: "Perth" }] },
+  { id: "united-states", label: "United States", cities: [{ id: "los-angeles", label: "Los Angeles" }] },
+];
+
 /**
  * Small, synthetic examples intended for teaching OLAP concepts. They are not
  * real company data and their generated sales values do not represent real sales.
@@ -46,15 +58,8 @@ export const industryTemplates: IndustryTemplate[] = [
   {
     id: "furniture-home",
     name: "Furniture & Home Living",
-    productCategories: [
-      { id: "living-room", label: "Living Room", products: [{ id: "sofa", label: "Sofa" }, { id: "armchair", label: "Armchair" }] },
-      { id: "bedroom", label: "Bedroom", products: [{ id: "bed-frame", label: "Bed Frame" }] },
-      { id: "storage", label: "Storage", products: [{ id: "bookcase", label: "Bookcase" }] },
-    ],
-    countries: [
-      { id: "australia", label: "Australia", cities: [{ id: "sydney", label: "Sydney" }, { id: "perth", label: "Perth" }] },
-      { id: "united-states", label: "United States", cities: [{ id: "los-angeles", label: "Los Angeles" }] },
-    ],
+    productCategories: defaultProductCategories,
+    countries: defaultLocationCountries,
     salesProfile: { minimum: 900, maximum: 5_000, seasonality: retailSeasonality },
   },
   {

@@ -61,6 +61,23 @@ describe("industry templates", () => {
       "Los Angeles",
     ]);
   });
+
+  it("copies the default Product and Location data into the generated dataset", () => {
+    const { dataset } = generateIndustryWorkspace({
+      title: "Default analysis",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.3,
+    });
+    const products = levelMembers(dataset, "product", "product-item");
+    const cities = levelMembers(dataset, "location", "location-city");
+
+    expect(products.map((member) => member.label)).toEqual(["Sofa", "Armchair", "Bed Frame", "Bookcase"]);
+    expect(cities.map((member) => member.label)).toEqual(["Sydney", "Perth", "Los Angeles"]);
+    expect(dataset.facts).toHaveLength(12 * products.length * cities.length);
+    expect(dataset.facts.every((fact) => products.some((member) => member.id === fact.coordinates.product))).toBe(true);
+    expect(dataset.facts.every((fact) => cities.some((member) => member.id === fact.coordinates.location))).toBe(true);
+  });
 });
 
 describe("industry workspace generator", () => {
