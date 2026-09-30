@@ -136,6 +136,16 @@ const leafMemberIds = (dataset: CubeDataset, dimensionId: string): string[] => {
   return level?.members.map((member) => member.id) ?? [];
 };
 
+const memberIdsAtLevel = (dataset: CubeDataset, dimensionId: string, levelId: string): string[] =>
+  dataset.dimensions
+    .find((dimension) => dimension.id === dimensionId)
+    ?.levels.find((level) => level.id === levelId)?.members.map((member) => member.id) ?? [];
+
+const sameMemberIds = (actual: string[] | undefined, expected: string[]): boolean =>
+  Boolean(actual)
+  && actual!.length === expected.length
+  && actual!.every((memberId, index) => memberId === expected[index]);
+
 const indexByMemberId = (dataset: CubeDataset, dimensionId: string): Map<string, number> =>
   new Map(leafMemberIds(dataset, dimensionId).map((memberId, index) => [memberId, index]));
 
@@ -176,12 +186,8 @@ export const generateIndustryWorkspace = ({
   };
   dataset.facts = createFacts(dataset, template, random);
 
-  const productCategoryIds = dataset.dimensions
-    .find((dimension) => dimension.id === "product")
-    ?.levels.find((level) => level.id === "product-category")?.members.map((member) => member.id) ?? [];
-  const countryIds = dataset.dimensions
-    .find((dimension) => dimension.id === "location")
-    ?.levels.find((level) => level.id === "location-country")?.members.map((member) => member.id) ?? [];
+  const productCategoryIds = memberIdsAtLevel(dataset, "product", "product-category");
+  const countryIds = memberIdsAtLevel(dataset, "location", "location-country");
 
   return {
     dataset,
@@ -227,14 +233,27 @@ export const migrateGeneratedWorkspaceDefaults = (workspace: WorkspaceState): Wo
     return workspace;
   }
 
-  const productCategories = workspace.dataset.dimensions
-    .find((dimension) => dimension.id === "product")
-    ?.levels.find((level) => level.id === "product-category")?.members.map((member) => member.id) ?? [];
-  const countries = workspace.dataset.dimensions
-    .find((dimension) => dimension.id === "location")
-    ?.levels.find((level) => level.id === "location-country")?.members.map((member) => member.id) ?? [];
+  const productCategories = memberIdsAtLevel(workspace.dataset, "product", "product-category");
+  const products = leafMemberIds(workspace.dataset, "product");
+  const countries = memberIdsAtLevel(workspace.dataset, "location", "location-country");
+  const cities = leafMemberIds(workspace.dataset, "location");
 
-  if (productCategories.length === 0 || countries.length === 0) return workspace;
+  const hasLegacyDefaults = (
+    workspace.activeLevels.time === "time-quarter"
+    && workspace.activeLevels.product === "product-item"
+    && workspace.activeLevels.location === "location-city"
+    && workspace.operations.slice.dimensionId === "location"
+    && workspace.operations.slice.memberId === cities[0]
+    && sameMemberIds(workspace.operations.dice.selections.time, ["q1", "q2"])
+    && sameMemberIds(workspace.operations.dice.selections.product, products.slice(0, 2))
+    && sameMemberIds(workspace.operations.dice.selections.location, cities.slice(0, 2))
+    && workspace.operations.rollup.dimensionId === "location"
+    && workspace.operations.rollup.targetLevelId === "location-country"
+    && workspace.operations.drilldown.dimensionId === "time"
+    && workspace.operations.drilldown.targetLevelId === "time-month"
+  );
+
+  if (!hasLegacyDefaults || productCategories.length === 0 || countries.length === 0) return workspace;
 
   return {
     ...workspace,

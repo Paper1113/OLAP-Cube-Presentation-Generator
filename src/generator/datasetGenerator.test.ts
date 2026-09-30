@@ -194,6 +194,20 @@ describe("industry workspace generator", () => {
     const legacyWorkspace: WorkspaceState = {
       ...workspace,
       activeLevels: { time: "time-quarter", product: "product-item", location: "location-city" },
+      operations: {
+        ...workspace.operations,
+        slice: { dimensionId: "location", memberId: "city-furniture-home-sydney" },
+        dice: {
+          ...workspace.operations.dice,
+          selections: {
+            ...workspace.operations.dice.selections,
+            product: ["product-furniture-home-sofa", "product-furniture-home-armchair"],
+            location: ["city-furniture-home-sydney", "city-furniture-home-perth"],
+          },
+        },
+        rollup: { dimensionId: "location", targetLevelId: "location-country" },
+        drilldown: { dimensionId: "time", targetLevelId: "time-month" },
+      },
       generation: { ...workspace.generation, defaultLevelsVersion: undefined },
     };
 
@@ -214,6 +228,41 @@ describe("industry workspace generator", () => {
       "country-furniture-home-australia",
       "country-furniture-home-united-states",
     ]);
+  });
+
+  it("does not migrate a generated workspace with customized operation settings", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "Customized legacy analysis",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.3,
+    });
+    const customizedWorkspace: WorkspaceState = {
+      ...workspace,
+      activeLevels: { time: "time-quarter", product: "product-item", location: "location-city" },
+      operations: {
+        ...workspace.operations,
+        slice: { dimensionId: "location", memberId: "city-furniture-home-perth" },
+        dice: {
+          ...workspace.operations.dice,
+          selections: {
+            ...workspace.operations.dice.selections,
+            product: ["product-furniture-home-sofa", "product-furniture-home-armchair"],
+            location: ["city-furniture-home-sydney", "city-furniture-home-perth"],
+          },
+        },
+        rollup: { dimensionId: "location", targetLevelId: "location-country" },
+        drilldown: { dimensionId: "time", targetLevelId: "time-month" },
+      },
+      generation: { ...workspace.generation, defaultLevelsVersion: undefined },
+    };
+
+    const migrated = migrateGeneratedWorkspaceDefaults(customizedWorkspace);
+
+    expect(migrated).toBe(customizedWorkspace);
+    expect(migrated.activeLevels).toEqual({ time: "time-quarter", product: "product-item", location: "location-city" });
+    expect(migrated.operations.slice.memberId).toBe("city-furniture-home-perth");
+    expect(migrated.generation?.defaultLevelsVersion).toBeUndefined();
   });
 
   it("refreshes only Sales values while retaining each coordinate object", () => {
