@@ -32,7 +32,7 @@ describe("cube SVG layout", () => {
 
     expect(zAxisTitleY).toBeGreaterThan(80);
     expect(svg).toContain(`y="${zAxisTitleY}"`);
-    expect(svg).toContain("Location · City");
+    expect(svg).toContain("Location · Country");
   });
 
   it("keeps Z member labels above the cube faces and the Y title left of member labels", () => {

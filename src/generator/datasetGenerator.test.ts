@@ -3,7 +3,12 @@ import { createCubeView } from "../engine/cubeEngine";
 import { validateDataset } from "../engine/validation";
 import type { CubeDataset } from "../models/cube";
 import type { OperationConfig, WorkspaceState } from "../models/operation";
-import { generateIndustryWorkspace, refreshSalesFacts } from "./datasetGenerator";
+import {
+  generateIndustryWorkspace,
+  generatedWorkspaceDefaultsVersion,
+  migrateGeneratedWorkspaceDefaults,
+  refreshSalesFacts,
+} from "./datasetGenerator";
 import { synchronizeLeafFacts } from "./factSynchronizer";
 import { industryTemplates } from "./industryTemplates";
 
@@ -108,7 +113,17 @@ describe("industry workspace generator", () => {
       expect(products).toHaveLength(4);
       expect(cities).toHaveLength(3);
       expect(dataset.facts).toHaveLength(144);
-      expect(workspace.generation).toEqual({ industryId, selectedIndustryId: industryId, generated: true });
+      expect(workspace.generation).toEqual({
+        industryId,
+        selectedIndustryId: industryId,
+        generated: true,
+        defaultLevelsVersion: generatedWorkspaceDefaultsVersion,
+      });
+      expect(workspace.activeLevels).toEqual({
+        time: "time-quarter",
+        product: "product-category",
+        location: "location-country",
+      });
       expect(validateDataset(dataset)).toEqual([]);
 
       const categoryIds = new Set(categories.map((member) => member.id));
@@ -143,6 +158,63 @@ describe("industry workspace generator", () => {
       });
     },
   );
+
+  it("supports Drill-down from the default level of every dimension", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "Drill-down analysis",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.3,
+    });
+
+    const transitions = [
+      ["time", "time-month", "x"],
+      ["product", "product-item", "y"],
+      ["location", "location-city", "z"],
+    ] as const;
+
+    transitions.forEach(([dimensionId, targetLevelId, axis]) => {
+      const result = createCubeView(workspace.dataset, {
+        axisMapping: workspace.axisMapping,
+        activeLevels: workspace.activeLevels,
+        operation: { type: "drilldown", dimensionId, targetLevelId },
+      });
+      expect(result.errors).toEqual([]);
+      expect(result.view?.[axis].levelId).toBe(targetLevelId);
+    });
+  });
+
+  it("migrates generated workspaces saved with the old Product and Location defaults", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "Legacy analysis",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.3,
+    });
+    const legacyWorkspace: WorkspaceState = {
+      ...workspace,
+      activeLevels: { time: "time-quarter", product: "product-item", location: "location-city" },
+      generation: { ...workspace.generation, defaultLevelsVersion: undefined },
+    };
+
+    const migrated = migrateGeneratedWorkspaceDefaults(legacyWorkspace);
+
+    expect(migrated.activeLevels).toEqual({
+      time: "time-quarter",
+      product: "product-category",
+      location: "location-country",
+    });
+    expect(migrated.generation?.defaultLevelsVersion).toBe(generatedWorkspaceDefaultsVersion);
+    expect(migrated.operations.slice.memberId).toBe("country-furniture-home-australia");
+    expect(migrated.operations.dice.selections.product).toEqual([
+      "category-furniture-home-living-room",
+      "category-furniture-home-bedroom",
+    ]);
+    expect(migrated.operations.dice.selections.location).toEqual([
+      "country-furniture-home-australia",
+      "country-furniture-home-united-states",
+    ]);
+  });
 
   it("refreshes only Sales values while retaining each coordinate object", () => {
     const workspace = generateIndustryWorkspace({

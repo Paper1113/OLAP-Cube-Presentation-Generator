@@ -6,6 +6,8 @@ import { normalizeCubeAppearance, type CubeAppearance } from "../theme/cubeAppea
 import { getIndustryTemplate, type IndustryTemplate } from "./industryTemplates";
 import { generateSalesValue } from "./salesGenerator";
 
+export const generatedWorkspaceDefaultsVersion = 2;
+
 export interface GenerateDatasetOptions {
   title: string;
   industryId: string;
@@ -174,32 +176,91 @@ export const generateIndustryWorkspace = ({
   };
   dataset.facts = createFacts(dataset, template, random);
 
-  const productIds = leafMemberIds(dataset, "product");
-  const cityIds = leafMemberIds(dataset, "location");
+  const productCategoryIds = dataset.dimensions
+    .find((dimension) => dimension.id === "product")
+    ?.levels.find((level) => level.id === "product-category")?.members.map((member) => member.id) ?? [];
+  const countryIds = dataset.dimensions
+    .find((dimension) => dimension.id === "location")
+    ?.levels.find((level) => level.id === "location-country")?.members.map((member) => member.id) ?? [];
 
   return {
     dataset,
     axisMapping: { x: "time", y: "product", z: "location" },
     activeLevels: {
       time: "time-quarter",
-      product: "product-item",
-      location: "location-city",
+      product: "product-category",
+      location: "location-country",
     },
     operations: {
       activeOperation: "original",
-      slice: { dimensionId: "location", memberId: cityIds[0] ?? "" },
+      slice: { dimensionId: "location", memberId: countryIds[0] ?? "" },
       dice: {
         selections: {
           time: ["q1", "q2"],
-          product: productIds.slice(0, 2),
-          location: cityIds.slice(0, 2),
+          product: productCategoryIds.slice(0, 2),
+          location: countryIds.slice(0, 2),
         },
       },
-      rollup: { dimensionId: "location", targetLevelId: "location-country" },
+      rollup: { dimensionId: "time", targetLevelId: "time-year" },
       drilldown: { dimensionId: "time", targetLevelId: "time-month" },
     },
     appearance: normalizeCubeAppearance(appearance),
-    generation: { industryId: template.id, selectedIndustryId: template.id, generated: true },
+    generation: {
+      industryId: template.id,
+      selectedIndustryId: template.id,
+      generated: true,
+      defaultLevelsVersion: generatedWorkspaceDefaultsVersion,
+    },
+  };
+};
+
+/**
+ * Migrates generated workspaces saved before all three dimensions became
+ * drill-down-ready. Custom datasets and already-migrated workspaces are kept
+ * unchanged.
+ */
+export const migrateGeneratedWorkspaceDefaults = (workspace: WorkspaceState): WorkspaceState => {
+  if (
+    !workspace.generation?.generated
+    || workspace.generation.defaultLevelsVersion === generatedWorkspaceDefaultsVersion
+  ) {
+    return workspace;
+  }
+
+  const productCategories = workspace.dataset.dimensions
+    .find((dimension) => dimension.id === "product")
+    ?.levels.find((level) => level.id === "product-category")?.members.map((member) => member.id) ?? [];
+  const countries = workspace.dataset.dimensions
+    .find((dimension) => dimension.id === "location")
+    ?.levels.find((level) => level.id === "location-country")?.members.map((member) => member.id) ?? [];
+
+  if (productCategories.length === 0 || countries.length === 0) return workspace;
+
+  return {
+    ...workspace,
+    activeLevels: {
+      ...workspace.activeLevels,
+      product: "product-category",
+      location: "location-country",
+    },
+    operations: {
+      ...workspace.operations,
+      slice: { ...workspace.operations.slice, dimensionId: "location", memberId: countries[0] },
+      dice: {
+        ...workspace.operations.dice,
+        selections: {
+          ...workspace.operations.dice.selections,
+          product: productCategories.slice(0, 2),
+          location: countries.slice(0, 2),
+        },
+      },
+      rollup: { dimensionId: "time", targetLevelId: "time-year" },
+      drilldown: { dimensionId: "time", targetLevelId: "time-month" },
+    },
+    generation: {
+      ...workspace.generation,
+      defaultLevelsVersion: generatedWorkspaceDefaultsVersion,
+    },
   };
 };
 
