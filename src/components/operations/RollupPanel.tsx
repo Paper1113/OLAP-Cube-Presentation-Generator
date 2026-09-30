@@ -25,7 +25,7 @@ const higherLevels = (dimension: Dimension, sourceLevelId: string | undefined): 
   return sourceIndex > 0 ? levels.slice(0, sourceIndex) : [];
 };
 
-interface RollupTransition {
+export interface RollupTransition {
   sourceLevel: DimensionLevel;
   targets: DimensionLevel[];
 }
@@ -50,13 +50,25 @@ const rollupTransition = (
   return { sourceLevel, targets: [visibleLevel] };
 };
 
+export const availableRollupTransition = (
+  dataset: CubeDataset,
+  dimension: Dimension,
+  activeLevels: Record<string, string>,
+): RollupTransition | undefined => {
+  const candidate = rollupTransition(dimension, activeLevels);
+  if (!candidate || !hasFactDataAtLevel(dataset, dimension.id, candidate.sourceLevel.id)) {
+    return undefined;
+  }
+  const targets = candidate.targets.filter((level) =>
+    hasFactDataAtLevel(dataset, dimension.id, level.id),
+  );
+  return targets.length > 0 ? { ...candidate, targets } : undefined;
+};
+
 /** Configure an aggregation transition to a higher level in one hierarchy. */
 export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupPanelProps) => {
-  const availableTransition = (dimension: Dimension) => {
-    const candidate = rollupTransition(dimension, activeLevels);
-    return candidate && hasFactDataAtLevel(dataset, dimension.id, candidate.sourceLevel.id)
-      ? candidate : undefined;
-  };
+  const availableTransition = (dimension: Dimension) =>
+    availableRollupTransition(dataset, dimension, activeLevels);
   const rollupDimensions = dataset.dimensions.filter((dimension) =>
     Boolean(availableTransition(dimension)),
   );

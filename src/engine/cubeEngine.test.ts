@@ -137,6 +137,15 @@ describe("cube engine", () => {
     expect(result.view).toBeNull();
   });
 
+  it("does not repeat empty-hierarchy validation errors", () => {
+    const dataset = createTestDataset();
+    dataset.dimensions[0] = { ...dataset.dimensions[0], levels: [] };
+    const result = createCubeView(dataset, { axisMapping, activeLevels, operation: { type: "original" } });
+
+    expect(result.errors.filter((error) => error === "Time needs at least one hierarchy level.")).toHaveLength(1);
+    expect(result.view).toBeNull();
+  });
+
   it("aggregates leaf facts at the selected hierarchy levels", () => {
     expect(sumValues([100, 200])).toBe(300);
 

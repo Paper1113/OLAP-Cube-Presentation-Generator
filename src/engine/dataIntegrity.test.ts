@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { generateIndustryWorkspace } from "../generator/datasetGenerator";
 import { createCubeView, canDrillDown } from "./cubeEngine";
 import { buildPresentationSlides } from "../export/pptxExport";
+import { availableRollupTransition } from "../components/operations/RollupPanel";
 
 const workspace = () => generateIndustryWorkspace({ title: "Integrity", industryId: "furniture-home", random: () => 0.3 });
 
@@ -32,6 +33,16 @@ describe("fact integrity across views and exports", () => {
     const result = createCubeView(w.dataset, { ...w, operation: { type: "original" } });
     expect(result.view).toBeNull();
     expect(result.errors.join(" ")).toContain("Not all Time facts");
+  });
+
+  it("does not offer a roll-up target whose parent chain skips a level", () => {
+    const w = workspace();
+    const time = w.dataset.dimensions[0];
+    w.activeLevels.time = "time-month";
+    time.levels[2].members[0].parentMemberId = time.levels[0].members[0].id;
+
+    const transition = availableRollupTransition(w.dataset, time, w.activeLevels);
+    expect(transition?.targets.map((level) => level.id)).toEqual(["time-year"]);
   });
 
   it("prevents invalid measures being exported as partial totals", () => {

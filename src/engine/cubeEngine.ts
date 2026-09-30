@@ -176,8 +176,7 @@ export const createCubeView = (dataset: CubeDataset, request: CubeRequest): Cube
   const levels: Record<string, string> = {};
   dataset.dimensions.forEach((dimension) => {
     const levelId = currentLevelFor(dataset, dimension.id, request.activeLevels);
-    if (!levelId) errors.push(`${dimension.name} needs at least one hierarchy level.`);
-    else levels[dimension.id] = levelId;
+    if (levelId) levels[dimension.id] = levelId;
   });
 
   if (errors.length > 0 || !measure) return { view: null, errors };
