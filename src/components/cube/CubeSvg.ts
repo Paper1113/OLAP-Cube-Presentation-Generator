@@ -39,6 +39,11 @@ interface ValueLabelBounds {
   bottom: number;
 }
 
+interface CubePoint {
+  x: number;
+  y: number;
+}
+
 const valueLabelBounds = (
   valueCell: OrderedValueCell,
   options: CubeGeometryOptions,
@@ -66,19 +71,73 @@ const boundsOverlap = (left: ValueLabelBounds, right: ValueLabelBounds): boolean
   && left.top < right.bottom
   && left.bottom > right.top;
 
-const frontFaceBounds = (
+const rectanglePoints = (bounds: ValueLabelBounds): CubePoint[] => [
+  { x: bounds.left, y: bounds.top },
+  { x: bounds.right, y: bounds.top },
+  { x: bounds.right, y: bounds.bottom },
+  { x: bounds.left, y: bounds.bottom },
+];
+
+const facePolygons = (
   valueCell: OrderedValueCell,
   options: CubeGeometryOptions,
-): ValueLabelBounds => ({
-  left: valueCell.geometry.frontX,
-  right: valueCell.geometry.frontX + options.cellWidth,
-  top: valueCell.geometry.frontY,
-  bottom: valueCell.geometry.frontY + options.cellHeight,
+): CubePoint[][] => {
+  const { frontX, frontY } = valueCell.geometry;
+  const { cellWidth, cellHeight, depthX, depthY } = options;
+  return [
+    [
+      { x: frontX, y: frontY },
+      { x: frontX + depthX, y: frontY - depthY },
+      { x: frontX + cellWidth + depthX, y: frontY - depthY },
+      { x: frontX + cellWidth, y: frontY },
+    ],
+    [
+      { x: frontX + cellWidth, y: frontY },
+      { x: frontX + cellWidth + depthX, y: frontY - depthY },
+      { x: frontX + cellWidth + depthX, y: frontY + cellHeight - depthY },
+      { x: frontX + cellWidth, y: frontY + cellHeight },
+    ],
+    [
+      { x: frontX, y: frontY },
+      { x: frontX + cellWidth, y: frontY },
+      { x: frontX + cellWidth, y: frontY + cellHeight },
+      { x: frontX, y: frontY + cellHeight },
+    ],
+  ];
+};
+
+const polygonAxes = (polygon: CubePoint[]): CubePoint[] => polygon.map((point, index) => {
+  const next = polygon[(index + 1) % polygon.length];
+  return { x: next.y - point.y, y: point.x - next.x };
 });
+
+const projectPolygon = (polygon: CubePoint[], axis: CubePoint): { min: number; max: number } => {
+  const projections = polygon.map((point) => point.x * axis.x + point.y * axis.y);
+  return { min: Math.min(...projections), max: Math.max(...projections) };
+};
+
+const polygonsOverlap = (left: CubePoint[], right: CubePoint[]): boolean => {
+  const axes = [...polygonAxes(left), ...polygonAxes(right)];
+  return axes.every((axis) => {
+    const leftProjection = projectPolygon(left, axis);
+    const rightProjection = projectPolygon(right, axis);
+    return leftProjection.min < rightProjection.max && rightProjection.min < leftProjection.max;
+  });
+};
+
+const labelOverlapsLaterFace = (
+  bounds: ValueLabelBounds,
+  laterCells: OrderedValueCell[],
+  options: CubeGeometryOptions,
+): boolean => {
+  const labelPolygon = rectanglePoints(bounds);
+  return laterCells.some((laterCell) => facePolygons(laterCell, options)
+    .some((face) => polygonsOverlap(labelPolygon, face)));
+};
 
 /**
  * Keep value labels in the same painter order as the cube faces. A label that
- * would be covered by a later front face is omitted first; remaining labels
+ * would be covered by a later cell face is omitted first; remaining labels
  * that collide still let the later-drawn (front-most) cell win. Every cell
  * retains its accessible title and underlying value.
  */
@@ -91,10 +150,7 @@ const visibleValueCells = (
 
   orderedValueCells.forEach((valueCell, valueIndex) => {
     const bounds = valueLabelBounds(valueCell, options, theme);
-    const coveredByLaterFace = orderedValueCells
-      .slice(valueIndex + 1)
-      .some((laterCell) => boundsOverlap(bounds, frontFaceBounds(laterCell, options)));
-    if (coveredByLaterFace) return;
+    if (labelOverlapsLaterFace(bounds, orderedValueCells.slice(valueIndex + 1), options)) return;
 
     const collisions = visible.filter((candidate) => boundsOverlap(candidate.bounds, bounds));
     if (collisions.length > 0) {
