@@ -66,10 +66,21 @@ const boundsOverlap = (left: ValueLabelBounds, right: ValueLabelBounds): boolean
   && left.top < right.bottom
   && left.bottom > right.top;
 
+const frontFaceBounds = (
+  valueCell: OrderedValueCell,
+  options: CubeGeometryOptions,
+): ValueLabelBounds => ({
+  left: valueCell.geometry.frontX,
+  right: valueCell.geometry.frontX + options.cellWidth,
+  top: valueCell.geometry.frontY,
+  bottom: valueCell.geometry.frontY + options.cellHeight,
+});
+
 /**
- * Keep value labels in the same painter order as the cube faces. When two
- * projected labels collide, the later-drawn (front-most) cell wins, while
- * every cell still retains its accessible title and underlying value.
+ * Keep value labels in the same painter order as the cube faces. A label that
+ * would be covered by a later front face is omitted first; remaining labels
+ * that collide still let the later-drawn (front-most) cell win. Every cell
+ * retains its accessible title and underlying value.
  */
 const visibleValueCells = (
   orderedValueCells: OrderedValueCell[],
@@ -78,8 +89,13 @@ const visibleValueCells = (
 ): OrderedValueCell[] => {
   const visible: Array<OrderedValueCell & { bounds: ValueLabelBounds }> = [];
 
-  orderedValueCells.forEach((valueCell) => {
+  orderedValueCells.forEach((valueCell, valueIndex) => {
     const bounds = valueLabelBounds(valueCell, options, theme);
+    const coveredByLaterFace = orderedValueCells
+      .slice(valueIndex + 1)
+      .some((laterCell) => boundsOverlap(bounds, frontFaceBounds(laterCell, options)));
+    if (coveredByLaterFace) return;
+
     const collisions = visible.filter((candidate) => boundsOverlap(candidate.bounds, bounds));
     if (collisions.length > 0) {
       for (const collision of collisions) {
