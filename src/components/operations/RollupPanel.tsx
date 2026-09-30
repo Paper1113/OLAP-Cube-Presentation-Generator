@@ -25,24 +25,61 @@ const higherLevels = (dimension: Dimension, sourceLevelId: string | undefined): 
   return sourceIndex > 0 ? levels.slice(0, sourceIndex) : [];
 };
 
+interface RollupTransition {
+  sourceLevel: DimensionLevel;
+  targets: DimensionLevel[];
+}
+
+/**
+ * Returns the normal current-level transition, or a leaf-to-current-level
+ * transition when the visible default is already at the top of a dimension.
+ * This keeps Product and Location roll-ups available alongside Drill-down-ready
+ * Category and Country defaults without inventing any facts.
+ */
+const rollupTransition = (
+  dimension: Dimension,
+  activeLevels: Record<string, string>,
+): RollupTransition | undefined => {
+  const levels = orderedLevels(dimension);
+  const visibleLevel = currentLevel(dimension, activeLevels);
+  if (!visibleLevel) return undefined;
+
+  const visibleTargets = higherLevels(dimension, visibleLevel.id);
+  if (visibleTargets.length > 0) return { sourceLevel: visibleLevel, targets: visibleTargets };
+
+  const leafLevel = levels.at(-1);
+  return leafLevel && leafLevel.id !== visibleLevel.id
+    ? { sourceLevel: leafLevel, targets: [visibleLevel] }
+    : undefined;
+};
+
 /** Configure an aggregation transition to a higher level in one hierarchy. */
 export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupPanelProps) => {
   const rollupDimensions = dataset.dimensions.filter((dimension) =>
-    higherLevels(dimension, currentLevel(dimension, activeLevels)?.id).length > 0,
+    Boolean(rollupTransition(dimension, activeLevels)),
   );
   const selectedDimension = dataset.dimensions.find((dimension) => dimension.id === rollup.dimensionId)
     ?? rollupDimensions[0]
     ?? dataset.dimensions[0];
-  const sourceLevel = selectedDimension ? currentLevel(selectedDimension, activeLevels) : undefined;
-  const targets = selectedDimension ? higherLevels(selectedDimension, sourceLevel?.id) : [];
+  const transition = selectedDimension ? rollupTransition(selectedDimension, activeLevels) : undefined;
+  const configuredSourceLevel = selectedDimension && rollup.sourceLevelId
+    ? getLevel(selectedDimension, rollup.sourceLevelId)
+    : undefined;
+  const sourceLevel = configuredSourceLevel ?? transition?.sourceLevel;
+  const targets = selectedDimension && sourceLevel
+    ? higherLevels(selectedDimension, sourceLevel.id)
+      .filter((level) => transition?.targets.some((target) => target.id === level.id) ?? false)
+    : [];
   const targetIsAvailable = targets.some((level) => level.id === rollup.targetLevelId);
 
   const chooseDimension = (dimensionId: string) => {
     const dimension = dataset.dimensions.find((candidate) => candidate.id === dimensionId);
-    const nextTargets = dimension
-      ? higherLevels(dimension, currentLevel(dimension, activeLevels)?.id)
-      : [];
-    onChange({ dimensionId, targetLevelId: nextTargets.at(-1)?.id ?? "" });
+    const nextTransition = dimension ? rollupTransition(dimension, activeLevels) : undefined;
+    onChange({
+      dimensionId,
+      sourceLevelId: nextTransition?.sourceLevel.id,
+      targetLevelId: nextTransition?.targets.at(-1)?.id ?? "",
+    });
   };
 
   return (
@@ -59,7 +96,7 @@ export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupP
             Dimension
             <select value={selectedDimension?.id ?? ""} onChange={(event) => chooseDimension(event.target.value)}>
               {dataset.dimensions.map((dimension) => {
-                const available = higherLevels(dimension, currentLevel(dimension, activeLevels)?.id).length > 0;
+                const available = Boolean(rollupTransition(dimension, activeLevels));
                 return <option key={dimension.id} value={dimension.id} disabled={!available}>{dimension.name}{available ? "" : " (already at top level)"}</option>;
               })}
             </select>
@@ -74,6 +111,7 @@ export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupP
               value={targetIsAvailable ? rollup.targetLevelId : ""}
               onChange={(event) => onChange({
                 dimensionId: selectedDimension?.id ?? "",
+                sourceLevelId: sourceLevel?.id,
                 targetLevelId: event.target.value,
               })}
               disabled={targets.length === 0}

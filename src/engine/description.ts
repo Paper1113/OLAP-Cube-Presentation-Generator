@@ -40,7 +40,11 @@ export const describeOperation = (
   }
 
   const dimension = getDimension(dataset, operation.dimensionId);
-  const sourceLevel = dimension ? getLevel(dimension, levelByDimension[operation.dimensionId]) : undefined;
+  const sourceLevel = dimension
+    ? getLevel(dimension, operation.type === "rollup"
+      ? operation.sourceLevelId ?? levelByDimension[operation.dimensionId]
+      : levelByDimension[operation.dimensionId])
+    : undefined;
   const targetLevel = dimension ? getLevel(dimension, operation.targetLevelId) : undefined;
   const action = operation.type === "rollup" ? "aggregates" : "expands";
   const operationName = operation.type === "rollup" ? "Roll-up" : "Drill-down";

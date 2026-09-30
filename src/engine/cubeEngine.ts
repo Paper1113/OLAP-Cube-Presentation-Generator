@@ -89,13 +89,16 @@ const resolveOperationLevels = (
   if (operation.type !== "rollup" && operation.type !== "drilldown") return errors;
 
   const dimension = getDimension(dataset, operation.dimensionId);
-  const sourceLevelId = levels[operation.dimensionId];
+  const sourceLevelId = operation.type === "rollup"
+    ? operation.sourceLevelId ?? levels[operation.dimensionId]
+    : levels[operation.dimensionId];
   const targetLevel = dimension ? getLevel(dimension, operation.targetLevelId) : undefined;
-  if (!dimension || !sourceLevelId || !targetLevel) {
+  const sourceLevel = dimension && sourceLevelId ? getLevel(dimension, sourceLevelId) : undefined;
+  if (!dimension || !sourceLevel || !targetLevel) {
     return ["The selected hierarchy transition is no longer available."];
   }
 
-  const sourceIndex = levelIndex(dimension, sourceLevelId);
+  const sourceIndex = levelIndex(dimension, sourceLevel.id);
   const targetIndex = levelIndex(dimension, operation.targetLevelId);
   if (operation.type === "rollup") {
     if (targetIndex < 0 || targetIndex >= sourceIndex) {

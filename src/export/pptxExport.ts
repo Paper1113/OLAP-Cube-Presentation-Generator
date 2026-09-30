@@ -106,7 +106,9 @@ const operationDetails = (
   }
 
   const dimensionName = getDimension(input.dataset, operation.dimensionId)?.name ?? "Selected dimension";
-  const fromLevel = currentLevelName(input.dataset, input.activeLevels, operation.dimensionId);
+  const fromLevel = operation.type === "rollup" && operation.sourceLevelId
+    ? getLevelName(input.dataset, operation.dimensionId, operation.sourceLevelId)
+    : currentLevelName(input.dataset, input.activeLevels, operation.dimensionId);
   const toLevel = getLevelName(input.dataset, operation.dimensionId, operation.targetLevelId);
   return [`${dimensionName}: ${fromLevel} → ${toLevel}`, `Measure: ${input.dataset.measures[0]?.name ?? "Measure"} (SUM)`];
 };

@@ -177,6 +177,27 @@ describe("cube engine", () => {
     expect(cellValue(result, "q1", "sofa", "australia")).toBe(300);
   });
 
+  it("uses the configured source level when the visible default is already at the top", () => {
+    const result = createCubeView(createTestDataset(), {
+      axisMapping,
+      activeLevels: {
+        time: "time-quarter",
+        product: "product-category",
+        location: "location-country",
+      },
+      operation: {
+        type: "rollup",
+        dimensionId: "product",
+        sourceLevelId: "product-item",
+        targetLevelId: "product-category",
+      },
+    });
+    const view = expectView(result);
+
+    expect(view.y.levelId).toBe("product-category");
+    expect(cellValue(result, "q1", "seating", "australia")).toBe(300);
+  });
+
   it("drills Quarter down to leaf Month data", () => {
     const result = build({
       type: "drilldown",

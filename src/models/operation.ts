@@ -23,6 +23,8 @@ export interface RollupOperation {
   type: "rollup";
   dimensionId: string;
   targetLevelId: string;
+  /** Optional source level for roll-up transitions independent of the current visible level. */
+  sourceLevelId?: string;
 }
 
 export interface DrilldownOperation {
