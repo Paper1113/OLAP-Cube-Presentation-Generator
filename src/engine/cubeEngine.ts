@@ -171,9 +171,7 @@ const selectionsFor = (
 
 export const createCubeView = (dataset: CubeDataset, request: CubeRequest): CubeBuildResult => {
   const errors = [...validateDataset(dataset), ...validAxisMapping(dataset, request.axisMapping)];
-  if (dataset.dimensions.length !== 3) errors.push("The visual cube requires exactly three dimensions.");
   const measure: Measure | undefined = dataset.measures[0];
-  if (!measure) errors.push("Add a SUM measure before rendering a cube.");
 
   const levels: Record<string, string> = {};
   dataset.dimensions.forEach((dimension) => {

@@ -127,6 +127,16 @@ const cellValue = (
   )?.value;
 
 describe("cube engine", () => {
+  it("does not repeat dataset validation errors", () => {
+    const result = createCubeView(
+      { ...createTestDataset(), measures: [] },
+      { axisMapping, activeLevels, operation: { type: "original" } },
+    );
+
+    expect(result.errors.filter((error) => error === "Add a SUM measure before rendering a cube.")).toHaveLength(1);
+    expect(result.view).toBeNull();
+  });
+
   it("aggregates leaf facts at the selected hierarchy levels", () => {
     expect(sumValues([100, 200])).toBe(300);
 
