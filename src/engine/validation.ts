@@ -3,6 +3,7 @@ import { getMember, getLevel } from "./hierarchy";
 
 export const validateDataset = (dataset: CubeDataset): string[] => {
   const errors: string[] = [];
+  if (dataset.measures.length === 0) errors.push("Add a SUM measure before rendering a cube.");
   if (dataset.dimensions.length !== 3) errors.push("Exactly three dimensions are required.");
   const dimensionIds = new Set<string>();
 

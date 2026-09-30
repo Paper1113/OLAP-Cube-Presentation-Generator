@@ -8,6 +8,7 @@ import type {
 import type { AxisMapping, OperationConfig } from "../models/operation";
 import { addToAggregate } from "./aggregation";
 import { describeOperation } from "./description";
+import { validateDataset } from "./validation";
 import {
   getDimension,
   getLevel,
@@ -17,6 +18,7 @@ import {
   memberAtLevel,
   membersAtLevel,
   orderedLevels,
+  resolveRollupSourceLevel,
 } from "./hierarchy";
 
 export interface CubeRequest {
@@ -89,17 +91,27 @@ const resolveOperationLevels = (
   if (operation.type !== "rollup" && operation.type !== "drilldown") return errors;
 
   const dimension = getDimension(dataset, operation.dimensionId);
-  const sourceLevelId = levels[operation.dimensionId];
   const targetLevel = dimension ? getLevel(dimension, operation.targetLevelId) : undefined;
-  if (!dimension || !sourceLevelId || !targetLevel) {
+  const sourceLevel = dimension
+    ? operation.type === "rollup"
+      ? resolveRollupSourceLevel(
+        dimension,
+        levels[operation.dimensionId],
+        operation.sourceLevelId,
+      )
+      : getLevel(dimension, levels[operation.dimensionId])
+    : undefined;
+  if (!dimension || !sourceLevel || !targetLevel) {
     return ["The selected hierarchy transition is no longer available."];
   }
 
-  const sourceIndex = levelIndex(dimension, sourceLevelId);
+  const sourceIndex = levelIndex(dimension, sourceLevel.id);
   const targetIndex = levelIndex(dimension, operation.targetLevelId);
   if (operation.type === "rollup") {
     if (targetIndex < 0 || targetIndex >= sourceIndex) {
       errors.push("Roll-up must move to a higher hierarchy level.");
+    } else if (!hasFactDataAtLevel(dataset, dimension.id, sourceLevel.id)) {
+      errors.push("No complete source-level data is available for this Roll-up operation.");
     } else {
       levels[operation.dimensionId] = operation.targetLevelId;
     }
@@ -158,16 +170,13 @@ const selectionsFor = (
 };
 
 export const createCubeView = (dataset: CubeDataset, request: CubeRequest): CubeBuildResult => {
-  const errors = validAxisMapping(dataset, request.axisMapping);
-  if (dataset.dimensions.length !== 3) errors.push("The visual cube requires exactly three dimensions.");
+  const errors = [...validateDataset(dataset), ...validAxisMapping(dataset, request.axisMapping)];
   const measure: Measure | undefined = dataset.measures[0];
-  if (!measure) errors.push("Add a SUM measure before rendering a cube.");
 
   const levels: Record<string, string> = {};
   dataset.dimensions.forEach((dimension) => {
     const levelId = currentLevelFor(dataset, dimension.id, request.activeLevels);
-    if (!levelId) errors.push(`${dimension.name} needs at least one hierarchy level.`);
-    else levels[dimension.id] = levelId;
+    if (levelId) levels[dimension.id] = levelId;
   });
 
   if (errors.length > 0 || !measure) return { view: null, errors };
@@ -175,6 +184,15 @@ export const createCubeView = (dataset: CubeDataset, request: CubeRequest): Cube
   errors.push(...resolveOperationLevels(dataset, request, levels));
   const { selections, errors: selectionErrors } = selectionsFor(dataset, request, levels);
   errors.push(...selectionErrors);
+  if (errors.length > 0) return { view: null, errors };
+
+  // Never silently drop coarse facts or facts whose parent chain skips the
+  // requested level: doing so would present a partial total as a complete cube.
+  dataset.dimensions.forEach((dimension) => {
+    if (dataset.facts.some((fact) => !memberAtLevel(dimension, fact.coordinates[dimension.id], levels[dimension.id]))) {
+      errors.push(`Not all ${dimension.name} facts can be represented at the selected hierarchy level.`);
+    }
+  });
   if (errors.length > 0) return { view: null, errors };
 
   const x = asAxis(dataset, request.axisMapping.x, levels[request.axisMapping.x]);
@@ -247,6 +265,7 @@ export const canDrillDown = (
   const dimension = getDimension(dataset, dimensionId);
   const sourceLevelId = activeLevels[dimensionId];
   if (!dimension || !sourceLevelId) return false;
-  return levelIndex(dimension, targetLevelId) > levelIndex(dimension, sourceLevelId)
+  return levelIndex(dimension, sourceLevelId) >= 0
+    && levelIndex(dimension, targetLevelId) > levelIndex(dimension, sourceLevelId)
     && hasFactDataAtLevel(dataset, dimensionId, targetLevelId);
 };

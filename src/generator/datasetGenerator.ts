@@ -207,7 +207,7 @@ export const generateIndustryWorkspace = ({
           location: countryIds.slice(0, 2),
         },
       },
-      rollup: { dimensionId: "time", targetLevelId: "time-year" },
+      rollup: { dimensionId: "time", sourceLevelId: "time-quarter", targetLevelId: "time-year" },
       drilldown: { dimensionId: "time", targetLevelId: "time-month" },
     },
     appearance: normalizeCubeAppearance(appearance),
@@ -273,7 +273,7 @@ export const migrateGeneratedWorkspaceDefaults = (workspace: WorkspaceState): Wo
           location: countries.slice(0, 2),
         },
       },
-      rollup: { dimensionId: "time", targetLevelId: "time-year" },
+      rollup: { dimensionId: "time", sourceLevelId: "time-quarter", targetLevelId: "time-year" },
       drilldown: { dimensionId: "time", targetLevelId: "time-month" },
     },
     generation: {

@@ -24,6 +24,7 @@ import {
   type CubeAppearance,
 } from "./theme/cubeAppearance";
 import { clearWorkspace, loadWorkspace, saveWorkspace } from "./utils/storage";
+import { uniqueErrors } from "./utils/errors";
 
 type AppMode = "editor" | "presentation";
 
@@ -92,7 +93,7 @@ export default function App() {
     [workspace, operation],
   );
   const validationErrors = useMemo(() => validateDataset(workspace.dataset), [workspace.dataset]);
-  const visibleErrors = [...validationErrors, ...cubeResult.errors];
+  const visibleErrors = uniqueErrors([...validationErrors, ...cubeResult.errors]);
   const filenameBase = safeFilename(`${workspace.dataset.title}-${operation.type}`);
   const selectedIndustryId = selectedIndustryFor(workspace);
   const generatedTemplate = getIndustryTemplate(workspace.generation?.industryId ?? "");

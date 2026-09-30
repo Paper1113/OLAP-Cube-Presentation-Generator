@@ -124,6 +124,11 @@ describe("industry workspace generator", () => {
         product: "product-category",
         location: "location-country",
       });
+      expect(workspace.operations.rollup).toEqual({
+        dimensionId: "time",
+        sourceLevelId: "time-quarter",
+        targetLevelId: "time-year",
+      });
       expect(validateDataset(dataset)).toEqual([]);
 
       const categoryIds = new Set(categories.map((member) => member.id));
@@ -187,6 +192,34 @@ describe("industry workspace generator", () => {
     },
   );
 
+  it.each(industryTemplates.map((template) => [template.id]))(
+    "supports Roll-up from the corresponding source level of every dimension for %s",
+    (industryId) => {
+      const workspace = generateIndustryWorkspace({
+        title: "Roll-up analysis",
+        industryId,
+        year: 2032,
+        random: () => 0.3,
+      });
+
+      const transitions = [
+        ["time", "time-quarter", "time-year", "x"],
+        ["product", "product-item", "product-category", "y"],
+        ["location", "location-city", "location-country", "z"],
+      ] as const;
+
+      transitions.forEach(([dimensionId, sourceLevelId, targetLevelId, axis]) => {
+        const result = createCubeView(workspace.dataset, {
+          axisMapping: workspace.axisMapping,
+          activeLevels: workspace.activeLevels,
+          operation: { type: "rollup", dimensionId, sourceLevelId, targetLevelId },
+        });
+        expect(result.errors).toEqual([]);
+        expect(result.view?.[axis].levelId).toBe(targetLevelId);
+      });
+    },
+  );
+
   it("migrates generated workspaces saved with the old Product and Location defaults", () => {
     const workspace = generateIndustryWorkspace({
       title: "Legacy analysis",
@@ -231,6 +264,11 @@ describe("industry workspace generator", () => {
       "country-furniture-home-australia",
       "country-furniture-home-united-states",
     ]);
+    expect(migrated.operations.rollup).toEqual({
+      dimensionId: "time",
+      sourceLevelId: "time-quarter",
+      targetLevelId: "time-year",
+    });
   });
 
   it("does not migrate a generated workspace with customized operation settings", () => {

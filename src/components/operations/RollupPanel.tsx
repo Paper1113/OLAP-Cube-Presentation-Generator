@@ -1,7 +1,7 @@
 import type { CubeDataset } from "../../models/cube";
 import type { Dimension, DimensionLevel } from "../../models/dimension";
 import type { OperationSettings } from "../../models/operation";
-import { getLevel, orderedLevels } from "../../engine/hierarchy";
+import { getLevel, orderedLevels, rollupSourceLevel, hasFactDataAtLevel } from "../../engine/hierarchy";
 
 export interface RollupPanelProps {
   dataset: CubeDataset;
@@ -25,24 +25,77 @@ const higherLevels = (dimension: Dimension, sourceLevelId: string | undefined): 
   return sourceIndex > 0 ? levels.slice(0, sourceIndex) : [];
 };
 
+export interface RollupTransition {
+  sourceLevel: DimensionLevel;
+  targets: DimensionLevel[];
+}
+
+/**
+ * Returns the normal current-level transition, or a leaf-to-current-level
+ * transition when the visible default is already at the top of a dimension.
+ * This keeps Product and Location roll-ups available alongside Drill-down-ready
+ * Category and Country defaults without inventing any facts.
+ */
+const rollupTransition = (
+  dimension: Dimension,
+  activeLevels: Record<string, string>,
+): RollupTransition | undefined => {
+  const visibleLevel = currentLevel(dimension, activeLevels);
+  const sourceLevel = rollupSourceLevel(dimension, visibleLevel?.id);
+  if (!visibleLevel || !sourceLevel) return undefined;
+
+  const visibleTargets = higherLevels(dimension, visibleLevel.id);
+  if (visibleTargets.length > 0) return { sourceLevel: visibleLevel, targets: visibleTargets };
+
+  return { sourceLevel, targets: [visibleLevel] };
+};
+
+export const availableRollupTransition = (
+  dataset: CubeDataset,
+  dimension: Dimension,
+  activeLevels: Record<string, string>,
+): RollupTransition | undefined => {
+  const candidate = rollupTransition(dimension, activeLevels);
+  if (!candidate || !hasFactDataAtLevel(dataset, dimension.id, candidate.sourceLevel.id)) {
+    return undefined;
+  }
+  const targets = candidate.targets.filter((level) =>
+    hasFactDataAtLevel(dataset, dimension.id, level.id),
+  );
+  return targets.length > 0 ? { ...candidate, targets } : undefined;
+};
+
 /** Configure an aggregation transition to a higher level in one hierarchy. */
 export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupPanelProps) => {
+  const availableTransition = (dimension: Dimension) =>
+    availableRollupTransition(dataset, dimension, activeLevels);
   const rollupDimensions = dataset.dimensions.filter((dimension) =>
-    higherLevels(dimension, currentLevel(dimension, activeLevels)?.id).length > 0,
+    Boolean(availableTransition(dimension)),
   );
   const selectedDimension = dataset.dimensions.find((dimension) => dimension.id === rollup.dimensionId)
     ?? rollupDimensions[0]
     ?? dataset.dimensions[0];
-  const sourceLevel = selectedDimension ? currentLevel(selectedDimension, activeLevels) : undefined;
-  const targets = selectedDimension ? higherLevels(selectedDimension, sourceLevel?.id) : [];
+  const transition = selectedDimension ? availableTransition(selectedDimension) : undefined;
+  const configuredSourceLevel = selectedDimension && rollup.sourceLevelId
+    ? getLevel(selectedDimension, rollup.sourceLevelId)
+    : undefined;
+  const sourceLevel = configuredSourceLevel?.id === transition?.sourceLevel.id
+    ? configuredSourceLevel
+    : transition?.sourceLevel;
+  const targets = selectedDimension && sourceLevel
+    ? higherLevels(selectedDimension, sourceLevel.id)
+      .filter((level) => transition?.targets.some((target) => target.id === level.id) ?? false)
+    : [];
   const targetIsAvailable = targets.some((level) => level.id === rollup.targetLevelId);
 
   const chooseDimension = (dimensionId: string) => {
     const dimension = dataset.dimensions.find((candidate) => candidate.id === dimensionId);
-    const nextTargets = dimension
-      ? higherLevels(dimension, currentLevel(dimension, activeLevels)?.id)
-      : [];
-    onChange({ dimensionId, targetLevelId: nextTargets.at(-1)?.id ?? "" });
+    const nextTransition = dimension ? availableTransition(dimension) : undefined;
+    onChange({
+      dimensionId,
+      sourceLevelId: nextTransition?.sourceLevel.id,
+      targetLevelId: nextTransition?.targets.at(-1)?.id ?? "",
+    });
   };
 
   return (
@@ -59,8 +112,8 @@ export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupP
             Dimension
             <select value={selectedDimension?.id ?? ""} onChange={(event) => chooseDimension(event.target.value)}>
               {dataset.dimensions.map((dimension) => {
-                const available = higherLevels(dimension, currentLevel(dimension, activeLevels)?.id).length > 0;
-                return <option key={dimension.id} value={dimension.id} disabled={!available}>{dimension.name}{available ? "" : " (already at top level)"}</option>;
+                const available = Boolean(availableTransition(dimension));
+                return <option key={dimension.id} value={dimension.id} disabled={!available}>{dimension.name}{available ? "" : " (no available aggregation)"}</option>;
               })}
             </select>
           </label>
@@ -74,6 +127,7 @@ export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupP
               value={targetIsAvailable ? rollup.targetLevelId : ""}
               onChange={(event) => onChange({
                 dimensionId: selectedDimension?.id ?? "",
+                sourceLevelId: sourceLevel?.id,
                 targetLevelId: event.target.value,
               })}
               disabled={targets.length === 0}
@@ -83,7 +137,7 @@ export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupP
             </select>
           </label>
           {targets.length === 0 ? (
-            <p className="inline-errors" role="status">This dimension is already at its highest hierarchy level.</p>
+            <p className="inline-errors" role="status">No higher-level transition with complete source data is available.</p>
           ) : !targetIsAvailable ? (
             <p className="inline-errors" role="status">Choose a higher hierarchy level for the Roll-up.</p>
           ) : (

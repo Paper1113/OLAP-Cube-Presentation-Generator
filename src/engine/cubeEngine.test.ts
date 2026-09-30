@@ -127,6 +127,25 @@ const cellValue = (
   )?.value;
 
 describe("cube engine", () => {
+  it("does not repeat dataset validation errors", () => {
+    const result = createCubeView(
+      { ...createTestDataset(), measures: [] },
+      { axisMapping, activeLevels, operation: { type: "original" } },
+    );
+
+    expect(result.errors.filter((error) => error === "Add a SUM measure before rendering a cube.")).toHaveLength(1);
+    expect(result.view).toBeNull();
+  });
+
+  it("does not repeat empty-hierarchy validation errors", () => {
+    const dataset = createTestDataset();
+    dataset.dimensions[0] = { ...dataset.dimensions[0], levels: [] };
+    const result = createCubeView(dataset, { axisMapping, activeLevels, operation: { type: "original" } });
+
+    expect(result.errors.filter((error) => error === "Time needs at least one hierarchy level.")).toHaveLength(1);
+    expect(result.view).toBeNull();
+  });
+
   it("aggregates leaf facts at the selected hierarchy levels", () => {
     expect(sumValues([100, 200])).toBe(300);
 
@@ -175,6 +194,48 @@ describe("cube engine", () => {
     expect(view.z.levelId).toBe("location-country");
     expect(view.z.members.map((member) => member.id)).toEqual(["australia", "usa"]);
     expect(cellValue(result, "q1", "sofa", "australia")).toBe(300);
+  });
+
+  it("uses the configured source level when the visible default is already at the top", () => {
+    const result = createCubeView(createTestDataset(), {
+      axisMapping,
+      activeLevels: {
+        time: "time-quarter",
+        product: "product-category",
+        location: "location-country",
+      },
+      operation: {
+        type: "rollup",
+        dimensionId: "product",
+        sourceLevelId: "product-item",
+        targetLevelId: "product-category",
+      },
+    });
+    const view = expectView(result);
+
+    expect(view.y.levelId).toBe("product-category");
+    expect(cellValue(result, "q1", "seating", "australia")).toBe(300);
+  });
+
+  it("refreshes a stale configured source after the active level changes", () => {
+    const result = createCubeView(createTestDataset(), {
+      axisMapping,
+      activeLevels: {
+        time: "time-month",
+        product: "product-item",
+        location: "location-city",
+      },
+      operation: {
+        type: "rollup",
+        dimensionId: "time",
+        sourceLevelId: "time-quarter",
+        targetLevelId: "time-quarter",
+      },
+    });
+    const view = expectView(result);
+
+    expect(view.x.levelId).toBe("time-quarter");
+    expect(view.description).toContain("from Month level to Quarter level");
   });
 
   it("drills Quarter down to leaf Month data", () => {
