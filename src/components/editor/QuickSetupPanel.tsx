@@ -19,8 +19,10 @@ const templateSummary = (industryId: string) => {
     name: template.name,
     productCount,
     categoryCount: template.productCategories.length,
+    products: template.productCategories.flatMap((category) => category.products.map((product) => product.label)),
     cityCount,
     countryCount: template.countries.length,
+    cities: template.countries.flatMap((country) => country.cities.map((city) => city.label)),
   };
 };
 
@@ -80,6 +82,8 @@ export const QuickSetupPanel = ({
         <strong>{summary.name}</strong>
         <span>{summary.productCount} Products · {summary.categoryCount} Categories</span>
         <span>{summary.cityCount} Cities · {summary.countryCount} Countries · 144 Monthly Facts</span>
+        <span>Products: {summary.products.join(", ")}</span>
+        <span>Locations: {summary.cities.join(", ")}</span>
       </div>
     </section>
   );

@@ -45,6 +45,22 @@ describe("industry templates", () => {
       expect(template.countries.flatMap((country) => country.cities)).toHaveLength(3);
     });
   });
+
+  it("keeps the default Furniture sample's Product and Location members aligned", () => {
+    const template = industryTemplates[0];
+
+    expect(template.productCategories.flatMap((category) => category.products.map((product) => product.label))).toEqual([
+      "Sofa",
+      "Armchair",
+      "Bed Frame",
+      "Bookcase",
+    ]);
+    expect(template.countries.flatMap((country) => country.cities.map((city) => city.label))).toEqual([
+      "Sydney",
+      "Perth",
+      "Los Angeles",
+    ]);
+  });
 });
 
 describe("industry workspace generator", () => {
