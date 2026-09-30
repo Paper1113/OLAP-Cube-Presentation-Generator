@@ -159,30 +159,33 @@ describe("industry workspace generator", () => {
     },
   );
 
-  it("supports Drill-down from the default level of every dimension", () => {
-    const workspace = generateIndustryWorkspace({
-      title: "Drill-down analysis",
-      industryId: "furniture-home",
-      year: 2032,
-      random: () => 0.3,
-    });
-
-    const transitions = [
-      ["time", "time-month", "x"],
-      ["product", "product-item", "y"],
-      ["location", "location-city", "z"],
-    ] as const;
-
-    transitions.forEach(([dimensionId, targetLevelId, axis]) => {
-      const result = createCubeView(workspace.dataset, {
-        axisMapping: workspace.axisMapping,
-        activeLevels: workspace.activeLevels,
-        operation: { type: "drilldown", dimensionId, targetLevelId },
+  it.each(industryTemplates.map((template) => [template.id]))(
+    "supports Drill-down from the default level of every dimension for %s",
+    (industryId) => {
+      const workspace = generateIndustryWorkspace({
+        title: "Drill-down analysis",
+        industryId,
+        year: 2032,
+        random: () => 0.3,
       });
-      expect(result.errors).toEqual([]);
-      expect(result.view?.[axis].levelId).toBe(targetLevelId);
-    });
-  });
+
+      const transitions = [
+        ["time", "time-month", "x"],
+        ["product", "product-item", "y"],
+        ["location", "location-city", "z"],
+      ] as const;
+
+      transitions.forEach(([dimensionId, targetLevelId, axis]) => {
+        const result = createCubeView(workspace.dataset, {
+          axisMapping: workspace.axisMapping,
+          activeLevels: workspace.activeLevels,
+          operation: { type: "drilldown", dimensionId, targetLevelId },
+        });
+        expect(result.errors).toEqual([]);
+        expect(result.view?.[axis].levelId).toBe(targetLevelId);
+      });
+    },
+  );
 
   it("migrates generated workspaces saved with the old Product and Location defaults", () => {
     const workspace = generateIndustryWorkspace({
