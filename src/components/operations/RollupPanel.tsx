@@ -1,7 +1,7 @@
 import type { CubeDataset } from "../../models/cube";
 import type { Dimension, DimensionLevel } from "../../models/dimension";
 import type { OperationSettings } from "../../models/operation";
-import { getLevel, orderedLevels, rollupSourceLevel } from "../../engine/hierarchy";
+import { getLevel, orderedLevels, rollupSourceLevel, hasFactDataAtLevel } from "../../engine/hierarchy";
 
 export interface RollupPanelProps {
   dataset: CubeDataset;
@@ -52,13 +52,18 @@ const rollupTransition = (
 
 /** Configure an aggregation transition to a higher level in one hierarchy. */
 export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupPanelProps) => {
+  const availableTransition = (dimension: Dimension) => {
+    const candidate = rollupTransition(dimension, activeLevels);
+    return candidate && hasFactDataAtLevel(dataset, dimension.id, candidate.sourceLevel.id)
+      ? candidate : undefined;
+  };
   const rollupDimensions = dataset.dimensions.filter((dimension) =>
-    Boolean(rollupTransition(dimension, activeLevels)),
+    Boolean(availableTransition(dimension)),
   );
   const selectedDimension = dataset.dimensions.find((dimension) => dimension.id === rollup.dimensionId)
     ?? rollupDimensions[0]
     ?? dataset.dimensions[0];
-  const transition = selectedDimension ? rollupTransition(selectedDimension, activeLevels) : undefined;
+  const transition = selectedDimension ? availableTransition(selectedDimension) : undefined;
   const configuredSourceLevel = selectedDimension && rollup.sourceLevelId
     ? getLevel(selectedDimension, rollup.sourceLevelId)
     : undefined;
@@ -73,7 +78,7 @@ export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupP
 
   const chooseDimension = (dimensionId: string) => {
     const dimension = dataset.dimensions.find((candidate) => candidate.id === dimensionId);
-    const nextTransition = dimension ? rollupTransition(dimension, activeLevels) : undefined;
+    const nextTransition = dimension ? availableTransition(dimension) : undefined;
     onChange({
       dimensionId,
       sourceLevelId: nextTransition?.sourceLevel.id,
@@ -95,8 +100,8 @@ export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupP
             Dimension
             <select value={selectedDimension?.id ?? ""} onChange={(event) => chooseDimension(event.target.value)}>
               {dataset.dimensions.map((dimension) => {
-                const available = Boolean(rollupTransition(dimension, activeLevels));
-                return <option key={dimension.id} value={dimension.id} disabled={!available}>{dimension.name}{available ? "" : " (already at top level)"}</option>;
+                const available = Boolean(availableTransition(dimension));
+                return <option key={dimension.id} value={dimension.id} disabled={!available}>{dimension.name}{available ? "" : " (no available aggregation)"}</option>;
               })}
             </select>
           </label>
@@ -120,7 +125,7 @@ export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupP
             </select>
           </label>
           {targets.length === 0 ? (
-            <p className="inline-errors" role="status">This dimension is already at its highest hierarchy level.</p>
+            <p className="inline-errors" role="status">No higher-level transition with complete source data is available.</p>
           ) : !targetIsAvailable ? (
             <p className="inline-errors" role="status">Choose a higher hierarchy level for the Roll-up.</p>
           ) : (

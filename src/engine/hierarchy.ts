@@ -90,7 +90,7 @@ export const hasFactDataAtLevel = (
     return false;
   }
 
-  return dataset.facts.some((fact) => {
+  return dataset.facts.length > 0 && dataset.facts.every((fact) => {
     const coordinate = fact.coordinates[dimensionId];
     return coordinate !== undefined && memberAtLevel(dimension, coordinate, levelId) !== undefined;
   });
