@@ -46,11 +46,11 @@ Changing the industry dropdown by itself never replaces the current dataset. Gen
 
 The core controls remain outside Advanced Settings:
 
-1. **Original** — Quarterly Sales by Product and City.
+1. **Original** — Quarterly Sales by Product Category and Country.
 2. **Slice** — Fix one member, such as a City.
 3. **Dice** — Select member subsets across all three dimensions.
-4. **Roll-up** — Aggregate City to Country.
-5. **Drill-down** — Expand Quarter to Month.
+4. **Roll-up** — Aggregate Quarter to Year.
+5. **Drill-down** — Expand Quarter to Month, Country to City, or Category to Product.
 
 The current diagram can be exported as SVG or high-resolution PNG, and the generated workspace can be rendered in the presentation preview or downloaded as a six-slide PowerPoint file.
 

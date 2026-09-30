@@ -57,6 +57,8 @@ export interface WorkspaceGenerationMetadata {
   /** A Quick Setup selection can be pending until Generate Dataset is clicked. */
   selectedIndustryId?: string;
   generated?: boolean;
+  /** Version of the generated workspace defaults, used for safe one-time migrations. */
+  defaultLevelsVersion?: number;
 }
 
 export interface WorkspaceState {

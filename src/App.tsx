@@ -10,7 +10,11 @@ import { validateDataset } from "./engine/validation";
 import { downloadPng } from "./export/pngExport";
 import { exportPresentation } from "./export/pptxExport";
 import { downloadSvg } from "./export/svgExport";
-import { generateIndustryWorkspace, refreshSalesFacts } from "./generator/datasetGenerator";
+import {
+  generateIndustryWorkspace,
+  migrateGeneratedWorkspaceDefaults,
+  refreshSalesFacts,
+} from "./generator/datasetGenerator";
 import { synchronizeLeafFacts } from "./generator/factSynchronizer";
 import { defaultIndustryId, getIndustryTemplate } from "./generator/industryTemplates";
 import type { OperationConfig, WorkspaceState } from "./models/operation";
@@ -67,7 +71,9 @@ const selectedIndustryFor = (workspace: WorkspaceState): string => {
 export default function App() {
   const [workspace, setWorkspace] = useState<WorkspaceState>(() => {
     const stored = loadWorkspace();
-    return hasUsableDataset(stored) ? stored : createDefaultWorkspace();
+    return hasUsableDataset(stored)
+      ? migrateGeneratedWorkspaceDefaults(stored)
+      : createDefaultWorkspace();
   });
   const [mode, setMode] = useState<AppMode>("editor");
   const [exportStatus, setExportStatus] = useState("");

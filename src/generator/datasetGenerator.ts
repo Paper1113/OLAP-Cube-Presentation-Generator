@@ -6,6 +6,8 @@ import { normalizeCubeAppearance, type CubeAppearance } from "../theme/cubeAppea
 import { getIndustryTemplate, type IndustryTemplate } from "./industryTemplates";
 import { generateSalesValue } from "./salesGenerator";
 
+export const generatedWorkspaceDefaultsVersion = 2;
+
 export interface GenerateDatasetOptions {
   title: string;
   industryId: string;
@@ -134,6 +136,16 @@ const leafMemberIds = (dataset: CubeDataset, dimensionId: string): string[] => {
   return level?.members.map((member) => member.id) ?? [];
 };
 
+const memberIdsAtLevel = (dataset: CubeDataset, dimensionId: string, levelId: string): string[] =>
+  dataset.dimensions
+    .find((dimension) => dimension.id === dimensionId)
+    ?.levels.find((level) => level.id === levelId)?.members.map((member) => member.id) ?? [];
+
+const sameMemberIds = (actual: string[] | undefined, expected: string[]): boolean =>
+  Boolean(actual)
+  && actual!.length === expected.length
+  && actual!.every((memberId, index) => memberId === expected[index]);
+
 const indexByMemberId = (dataset: CubeDataset, dimensionId: string): Map<string, number> =>
   new Map(leafMemberIds(dataset, dimensionId).map((memberId, index) => [memberId, index]));
 
@@ -174,32 +186,100 @@ export const generateIndustryWorkspace = ({
   };
   dataset.facts = createFacts(dataset, template, random);
 
-  const productIds = leafMemberIds(dataset, "product");
-  const cityIds = leafMemberIds(dataset, "location");
+  const productCategoryIds = memberIdsAtLevel(dataset, "product", "product-category");
+  const countryIds = memberIdsAtLevel(dataset, "location", "location-country");
 
   return {
     dataset,
     axisMapping: { x: "time", y: "product", z: "location" },
     activeLevels: {
       time: "time-quarter",
-      product: "product-item",
-      location: "location-city",
+      product: "product-category",
+      location: "location-country",
     },
     operations: {
       activeOperation: "original",
-      slice: { dimensionId: "location", memberId: cityIds[0] ?? "" },
+      slice: { dimensionId: "location", memberId: countryIds[0] ?? "" },
       dice: {
         selections: {
           time: ["q1", "q2"],
-          product: productIds.slice(0, 2),
-          location: cityIds.slice(0, 2),
+          product: productCategoryIds.slice(0, 2),
+          location: countryIds.slice(0, 2),
         },
       },
-      rollup: { dimensionId: "location", targetLevelId: "location-country" },
+      rollup: { dimensionId: "time", targetLevelId: "time-year" },
       drilldown: { dimensionId: "time", targetLevelId: "time-month" },
     },
     appearance: normalizeCubeAppearance(appearance),
-    generation: { industryId: template.id, selectedIndustryId: template.id, generated: true },
+    generation: {
+      industryId: template.id,
+      selectedIndustryId: template.id,
+      generated: true,
+      defaultLevelsVersion: generatedWorkspaceDefaultsVersion,
+    },
+  };
+};
+
+/**
+ * Migrates generated workspaces saved before all three dimensions became
+ * drill-down-ready. Custom datasets and already-migrated workspaces are kept
+ * unchanged.
+ */
+export const migrateGeneratedWorkspaceDefaults = (workspace: WorkspaceState): WorkspaceState => {
+  if (
+    !workspace.generation?.generated
+    || workspace.generation.defaultLevelsVersion === generatedWorkspaceDefaultsVersion
+  ) {
+    return workspace;
+  }
+
+  const productCategories = memberIdsAtLevel(workspace.dataset, "product", "product-category");
+  const products = leafMemberIds(workspace.dataset, "product");
+  const countries = memberIdsAtLevel(workspace.dataset, "location", "location-country");
+  const cities = leafMemberIds(workspace.dataset, "location");
+
+  const hasLegacyDefaults = (
+    workspace.activeLevels.time === "time-quarter"
+    && workspace.activeLevels.product === "product-item"
+    && workspace.activeLevels.location === "location-city"
+    && workspace.operations.slice.dimensionId === "location"
+    && workspace.operations.slice.memberId === cities[0]
+    && sameMemberIds(workspace.operations.dice.selections.time, ["q1", "q2"])
+    && sameMemberIds(workspace.operations.dice.selections.product, products.slice(0, 2))
+    && sameMemberIds(workspace.operations.dice.selections.location, cities.slice(0, 2))
+    && workspace.operations.rollup.dimensionId === "location"
+    && workspace.operations.rollup.targetLevelId === "location-country"
+    && workspace.operations.drilldown.dimensionId === "time"
+    && workspace.operations.drilldown.targetLevelId === "time-month"
+  );
+
+  if (!hasLegacyDefaults || productCategories.length === 0 || countries.length === 0) return workspace;
+
+  return {
+    ...workspace,
+    activeLevels: {
+      ...workspace.activeLevels,
+      product: "product-category",
+      location: "location-country",
+    },
+    operations: {
+      ...workspace.operations,
+      slice: { ...workspace.operations.slice, dimensionId: "location", memberId: countries[0] },
+      dice: {
+        ...workspace.operations.dice,
+        selections: {
+          ...workspace.operations.dice.selections,
+          product: productCategories.slice(0, 2),
+          location: countries.slice(0, 2),
+        },
+      },
+      rollup: { dimensionId: "time", targetLevelId: "time-year" },
+      drilldown: { dimensionId: "time", targetLevelId: "time-month" },
+    },
+    generation: {
+      ...workspace.generation,
+      defaultLevelsVersion: generatedWorkspaceDefaultsVersion,
+    },
   };
 };
 
