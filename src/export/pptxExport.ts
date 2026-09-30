@@ -1,6 +1,7 @@
 import PptxGenJS from "pptxgenjs";
 import { createCubeSvgMarkup } from "../components/cube/CubeSvg";
 import { createCubeView } from "../engine/cubeEngine";
+import { resolveRollupSourceLevel } from "../engine/hierarchy";
 import type { CubeDataset, CubeViewModel } from "../models/cube";
 import type {
   AxisMapping,
@@ -105,9 +106,14 @@ const operationDetails = (
     });
   }
 
-  const dimensionName = getDimension(input.dataset, operation.dimensionId)?.name ?? "Selected dimension";
-  const fromLevel = operation.type === "rollup" && operation.sourceLevelId
-    ? getLevelName(input.dataset, operation.dimensionId, operation.sourceLevelId)
+  const dimension = getDimension(input.dataset, operation.dimensionId);
+  const dimensionName = dimension?.name ?? "Selected dimension";
+  const fromLevel = operation.type === "rollup" && dimension
+    ? resolveRollupSourceLevel(
+      dimension,
+      input.activeLevels[operation.dimensionId],
+      operation.sourceLevelId,
+    )?.name ?? "Current level"
     : currentLevelName(input.dataset, input.activeLevels, operation.dimensionId);
   const toLevel = getLevelName(input.dataset, operation.dimensionId, operation.targetLevelId);
   return [`${dimensionName}: ${fromLevel} → ${toLevel}`, `Measure: ${input.dataset.measures[0]?.name ?? "Measure"} (SUM)`];

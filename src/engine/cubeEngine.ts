@@ -17,6 +17,7 @@ import {
   memberAtLevel,
   membersAtLevel,
   orderedLevels,
+  resolveRollupSourceLevel,
 } from "./hierarchy";
 
 export interface CubeRequest {
@@ -89,11 +90,16 @@ const resolveOperationLevels = (
   if (operation.type !== "rollup" && operation.type !== "drilldown") return errors;
 
   const dimension = getDimension(dataset, operation.dimensionId);
-  const sourceLevelId = operation.type === "rollup"
-    ? operation.sourceLevelId ?? levels[operation.dimensionId]
-    : levels[operation.dimensionId];
   const targetLevel = dimension ? getLevel(dimension, operation.targetLevelId) : undefined;
-  const sourceLevel = dimension && sourceLevelId ? getLevel(dimension, sourceLevelId) : undefined;
+  const sourceLevel = dimension
+    ? operation.type === "rollup"
+      ? resolveRollupSourceLevel(
+        dimension,
+        levels[operation.dimensionId],
+        operation.sourceLevelId,
+      )
+      : getLevel(dimension, levels[operation.dimensionId])
+    : undefined;
   if (!dimension || !sourceLevel || !targetLevel) {
     return ["The selected hierarchy transition is no longer available."];
   }

@@ -198,6 +198,27 @@ describe("cube engine", () => {
     expect(cellValue(result, "q1", "seating", "australia")).toBe(300);
   });
 
+  it("refreshes a stale configured source after the active level changes", () => {
+    const result = createCubeView(createTestDataset(), {
+      axisMapping,
+      activeLevels: {
+        time: "time-month",
+        product: "product-item",
+        location: "location-city",
+      },
+      operation: {
+        type: "rollup",
+        dimensionId: "time",
+        sourceLevelId: "time-quarter",
+        targetLevelId: "time-quarter",
+      },
+    });
+    const view = expectView(result);
+
+    expect(view.x.levelId).toBe("time-quarter");
+    expect(view.description).toContain("from Month level to Quarter level");
+  });
+
   it("drills Quarter down to leaf Month data", () => {
     const result = build({
       type: "drilldown",

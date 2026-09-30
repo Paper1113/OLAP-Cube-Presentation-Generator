@@ -41,6 +41,45 @@ export const levelIndex = (dimension: Dimension, levelId: string): number =>
 export const levelName = (dimension: Dimension, levelId: string): string =>
   getLevel(dimension, levelId)?.name ?? "Unknown level";
 
+/**
+ * Derive the source level for the generated Roll-up control. A visible level
+ * with a higher ancestor rolls up from itself; a visible top level falls back
+ * to the leaf level so the default Product and Location views remain
+ * Drill-down-ready while still exposing a valid aggregation.
+ */
+export const rollupSourceLevel = (
+  dimension: Dimension,
+  activeLevelId: string | undefined,
+): DimensionLevel | undefined => {
+  const levels = orderedLevels(dimension);
+  const visibleLevel = activeLevelId ? getLevel(dimension, activeLevelId) : levels.at(-1);
+  if (!visibleLevel) return undefined;
+
+  const visibleIndex = levels.findIndex((level) => level.id === visibleLevel.id);
+  if (visibleIndex > 0) return visibleLevel;
+
+  const leafLevel = levels.at(-1);
+  return leafLevel && leafLevel.id !== visibleLevel.id ? leafLevel : undefined;
+};
+
+/**
+ * Keep persisted Roll-up settings aligned with the current visible hierarchy.
+ * Older or stale workspaces may retain a source from a previous active level.
+ */
+export const resolveRollupSourceLevel = (
+  dimension: Dimension,
+  activeLevelId: string | undefined,
+  configuredSourceLevelId: string | undefined,
+): DimensionLevel | undefined => {
+  const derivedSource = rollupSourceLevel(dimension, activeLevelId);
+  const configuredSource = configuredSourceLevelId
+    ? getLevel(dimension, configuredSourceLevelId)
+    : undefined;
+  return configuredSource?.id === derivedSource?.id
+    ? configuredSource
+    : derivedSource ?? configuredSource;
+};
+
 export const hasFactDataAtLevel = (
   dataset: CubeDataset,
   dimensionId: string,

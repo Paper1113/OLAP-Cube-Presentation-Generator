@@ -1,6 +1,6 @@
 import type { CubeDataset } from "../models/cube";
 import type { OperationConfig } from "../models/operation";
-import { getDimension, getLevel, getMember } from "./hierarchy";
+import { getDimension, getLevel, getMember, resolveRollupSourceLevel } from "./hierarchy";
 
 const readableList = (labels: string[]): string => {
   if (labels.length === 0) return "no members";
@@ -41,9 +41,13 @@ export const describeOperation = (
 
   const dimension = getDimension(dataset, operation.dimensionId);
   const sourceLevel = dimension
-    ? getLevel(dimension, operation.type === "rollup"
-      ? operation.sourceLevelId ?? levelByDimension[operation.dimensionId]
-      : levelByDimension[operation.dimensionId])
+    ? operation.type === "rollup"
+      ? resolveRollupSourceLevel(
+        dimension,
+        levelByDimension[operation.dimensionId],
+        operation.sourceLevelId,
+      )
+      : getLevel(dimension, levelByDimension[operation.dimensionId])
     : undefined;
   const targetLevel = dimension ? getLevel(dimension, operation.targetLevelId) : undefined;
   const action = operation.type === "rollup" ? "aggregates" : "expands";

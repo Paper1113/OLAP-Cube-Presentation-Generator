@@ -1,7 +1,7 @@
 import type { CubeDataset } from "../../models/cube";
 import type { Dimension, DimensionLevel } from "../../models/dimension";
 import type { OperationSettings } from "../../models/operation";
-import { getLevel, orderedLevels } from "../../engine/hierarchy";
+import { getLevel, orderedLevels, rollupSourceLevel } from "../../engine/hierarchy";
 
 export interface RollupPanelProps {
   dataset: CubeDataset;
@@ -40,17 +40,14 @@ const rollupTransition = (
   dimension: Dimension,
   activeLevels: Record<string, string>,
 ): RollupTransition | undefined => {
-  const levels = orderedLevels(dimension);
   const visibleLevel = currentLevel(dimension, activeLevels);
-  if (!visibleLevel) return undefined;
+  const sourceLevel = rollupSourceLevel(dimension, visibleLevel?.id);
+  if (!visibleLevel || !sourceLevel) return undefined;
 
   const visibleTargets = higherLevels(dimension, visibleLevel.id);
   if (visibleTargets.length > 0) return { sourceLevel: visibleLevel, targets: visibleTargets };
 
-  const leafLevel = levels.at(-1);
-  return leafLevel && leafLevel.id !== visibleLevel.id
-    ? { sourceLevel: leafLevel, targets: [visibleLevel] }
-    : undefined;
+  return { sourceLevel, targets: [visibleLevel] };
 };
 
 /** Configure an aggregation transition to a higher level in one hierarchy. */
@@ -65,7 +62,9 @@ export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupP
   const configuredSourceLevel = selectedDimension && rollup.sourceLevelId
     ? getLevel(selectedDimension, rollup.sourceLevelId)
     : undefined;
-  const sourceLevel = configuredSourceLevel ?? transition?.sourceLevel;
+  const sourceLevel = configuredSourceLevel?.id === transition?.sourceLevel.id
+    ? configuredSourceLevel
+    : transition?.sourceLevel;
   const targets = selectedDimension && sourceLevel
     ? higherLevels(selectedDimension, sourceLevel.id)
       .filter((level) => transition?.targets.some((target) => target.id === level.id) ?? false)
