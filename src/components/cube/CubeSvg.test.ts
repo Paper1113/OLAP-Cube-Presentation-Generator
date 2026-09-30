@@ -56,6 +56,26 @@ describe("cube SVG layout", () => {
     expect(svg).toContain(`rotate(-90 24`);
   });
 
+  it("keeps every depth layer value readable above the cube faces", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "Layer sample",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.5,
+    });
+    const result = createCubeView(workspace.dataset, {
+      axisMapping: workspace.axisMapping,
+      activeLevels: workspace.activeLevels,
+      operation: { type: "original" },
+    });
+    const view = result.view!;
+    const svg = createCubeSvgMarkup(view);
+
+    expect(svg.match(/data-cube-value="true"/g)).toHaveLength(view.cells.length);
+    expect(svg).toContain('data-depth-index="1"');
+    expect(svg.indexOf('class="cube-values"')).toBeGreaterThan(svg.lastIndexOf('class="cube-cell"'));
+  });
+
   it("keeps the final Z member label clear of the Z-axis title", () => {
     const workspace = generateIndustryWorkspace({
       title: "Layout sample",

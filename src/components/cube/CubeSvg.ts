@@ -5,7 +5,7 @@ import {
   type CubeAppearance,
 } from "../../theme/cubeAppearance";
 import { cubeAxesMarkup } from "./CubeAxis";
-import { cubeCellMarkup } from "./CubeCell";
+import { cubeCellMarkup, cubeCellValueMarkup } from "./CubeCell";
 import { escapeSvgText } from "./CubeLabels";
 
 export interface CubeSvgOptions {
@@ -40,7 +40,11 @@ export const createCubeSvgMarkup = (view: CubeViewModel, options: CubeSvgOptions
   });
   const cellsMarkup = orderedCells.map((cell) => {
     const cellGeometry = geometryByCoordinate.get(`${xIndex.get(cell.xMemberId) ?? 0}:${yIndex.get(cell.yMemberId) ?? 0}:${zIndex.get(cell.zMemberId) ?? 0}`);
-    return cellGeometry ? cubeCellMarkup(cell, cellGeometry, geometry.options, view.measure.name, theme) : "";
+    return cellGeometry ? cubeCellMarkup(cell, cellGeometry, geometry.options, view.measure.name, theme, false) : "";
+  }).join("");
+  const valueMarkup = orderedCells.map((cell) => {
+    const cellGeometry = geometryByCoordinate.get(`${xIndex.get(cell.xMemberId) ?? 0}:${yIndex.get(cell.yMemberId) ?? 0}:${zIndex.get(cell.zMemberId) ?? 0}`);
+    return cellGeometry ? cubeCellValueMarkup(cell, cellGeometry, geometry.options, theme) : "";
   }).join("");
   const title = `${view.operationLabel}: ${view.datasetTitle}`;
   const fontFamily = escapeSvgText(theme.fontFamily);
@@ -52,6 +56,7 @@ export const createCubeSvgMarkup = (view: CubeViewModel, options: CubeSvgOptions
     <defs><marker id="axis-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="${theme.markerFill}" /></marker></defs>
     ${includeTitle ? `<text x="24" y="34" font-family="${fontFamily}" font-size="19" font-weight="700" fill="${theme.titleFill}">${escapeSvgText(view.operationLabel)}</text><text x="24" y="56" font-family="${fontFamily}" font-size="12" fill="${theme.subtitleFill}">${escapeSvgText(`${view.datasetTitle} · ${view.measure.name} (SUM)`)}</text>` : ""}
     ${cellsMarkup}
+    <g class="cube-values">${valueMarkup}</g>
     ${cubeAxesMarkup(view, geometry, theme)}
   </svg>`;
 };

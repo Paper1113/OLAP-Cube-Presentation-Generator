@@ -23,7 +23,7 @@ export interface RollupOperation {
   type: "rollup";
   dimensionId: string;
   targetLevelId: string;
-  /** Optional source level for roll-up transitions independent of the current visible level. */
+  /** Optional persisted metadata; the engine always uses the current visible level as source. */
   sourceLevelId?: string;
 }
 

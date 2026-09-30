@@ -211,7 +211,7 @@ describe("industry workspace generator", () => {
       transitions.forEach(([dimensionId, sourceLevelId, targetLevelId, axis]) => {
         const result = createCubeView(workspace.dataset, {
           axisMapping: workspace.axisMapping,
-          activeLevels: workspace.activeLevels,
+          activeLevels: { ...workspace.activeLevels, [dimensionId]: sourceLevelId },
           operation: { type: "rollup", dimensionId, sourceLevelId, targetLevelId },
         });
         expect(result.errors).toEqual([]);
