@@ -81,7 +81,7 @@ export const QuickSetupPanel = ({
       <div className="quick-setup__summary" aria-live="polite">
         <strong>{summary.name}</strong>
         <span>{summary.productCount} Products · {summary.categoryCount} Categories</span>
-        <span>{summary.cityCount} Cities · {summary.countryCount} Countries · 144 Monthly Facts</span>
+        <span>{summary.cityCount} Cities · {summary.countryCount} Countries · {12 * summary.productCount * summary.cityCount} Monthly Facts</span>
         <span>Products: {summary.products.join(", ")}</span>
         <span>Locations: {summary.cities.join(", ")}</span>
       </div>
