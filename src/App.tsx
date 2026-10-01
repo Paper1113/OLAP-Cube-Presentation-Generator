@@ -94,8 +94,7 @@ export default function App() {
     [workspace, operation],
   );
   const validationErrors = useMemo(() => validateDataset(workspace.dataset), [workspace.dataset]);
-  const allSlideErrors = useMemo(() => presentationErrors(buildPresentationSlides(workspace)), [workspace]);
-  const visibleErrors = uniqueErrors([...validationErrors, ...cubeResult.errors, ...allSlideErrors]);
+  const visibleErrors = uniqueErrors([...validationErrors, ...cubeResult.errors]);
   const filenameBase = safeFilename(`${workspace.dataset.title}-${operation.type}`);
   const selectedIndustryId = selectedIndustryFor(workspace);
   const generatedTemplate = getIndustryTemplate(workspace.generation?.industryId ?? "");
@@ -127,8 +126,12 @@ export default function App() {
   };
 
   const handlePptxExport = async () => {
-    if (allSlideErrors.length > 0) {
-      setExportStatus(`PowerPoint blocked: ${allSlideErrors.join("\n")}`);
+    // Build all five operation slides only for an explicit presentation export.
+    // Editing the current cube should not materialize five additional views on
+    // every keystroke; the same complete check still gates the export itself.
+    const slideErrors = presentationErrors(buildPresentationSlides(workspace));
+    if (slideErrors.length > 0) {
+      setExportStatus(`PowerPoint blocked: ${slideErrors.join("\n")}`);
       return;
     }
     setExportStatus("Creating the six-slide PowerPoint presentation…");
@@ -280,7 +283,7 @@ export default function App() {
             <div className="preview-actions">
               <button type="button" className="secondary-button" onClick={handleSvgExport} disabled={!cubeResult.view}>Export SVG</button>
               <button type="button" className="secondary-button" onClick={() => void handlePngExport()} disabled={!cubeResult.view}>Export PNG</button>
-              <button type="button" className="primary-button" onClick={() => void handlePptxExport()} disabled={allSlideErrors.length > 0}>Export PowerPoint</button>
+              <button type="button" className="primary-button" onClick={() => void handlePptxExport()} disabled={validationErrors.length > 0 || cubeResult.errors.length > 0}>Export PowerPoint</button>
               <button type="button" className="secondary-button" onClick={() => setMode("presentation")}>Open presentation preview</button>
             </div>
             <p className="export-status" role="status">{exportStatus}</p>
