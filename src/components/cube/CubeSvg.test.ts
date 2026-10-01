@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createCubeView } from "../../engine/cubeEngine";
 import {
   createCubeGeometry,
+  cubeZMemberLabelMaxWidth,
   getCubeZAxisTitleX,
   measureCubeTextWidth,
   fitCubeText,
@@ -87,6 +88,45 @@ describe("cube SVG layout", () => {
     const expectedZAxisTitleX = getCubeZAxisTitleX(view, geometry.originX, geometry.options);
 
     expect(svg).toContain(`<text x="${expectedZAxisTitleX}"`);
+  });
+
+  it("reserves the fitted width of a long narrow Z member label", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "Narrow label sample",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.5,
+    });
+    const result = createCubeView(workspace.dataset, {
+      axisMapping: workspace.axisMapping,
+      activeLevels: workspace.activeLevels,
+      operation: { type: "original" },
+    });
+    const view = result.view!;
+    const longNarrowLabel = "i".repeat(64);
+    const stressedView = {
+      ...view,
+      z: {
+        ...view.z,
+        members: view.z.members.map((member, index) => index === view.z.members.length - 1
+          ? { ...member, label: longNarrowLabel }
+          : member),
+      },
+    };
+    const geometry = createCubeGeometry(stressedView);
+    const expectedZAxisTitleX = getCubeZAxisTitleX(stressedView, geometry.originX, geometry.options);
+    const fittedLabel = fitCubeText(longNarrowLabel, cubeZMemberLabelMaxWidth, {
+      fontFamily: geometry.options.fontFamily,
+      fontSize: 12,
+    });
+    const finalLabelX = geometry.originX + (stressedView.z.members.length - 1) * geometry.options.depthX + 3;
+
+    expect(expectedZAxisTitleX).toBeGreaterThanOrEqual(
+      finalLabelX + measureCubeTextWidth(fittedLabel, {
+        fontFamily: geometry.options.fontFamily,
+        fontSize: 12,
+      }) + 12,
+    );
   });
 
   it("measures wide glyphs before placing the final Z label and axis title", () => {

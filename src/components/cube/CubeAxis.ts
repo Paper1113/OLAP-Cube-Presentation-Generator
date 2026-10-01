@@ -2,6 +2,7 @@ import type { CubeAxisView } from "../../models/cube";
 import {
   fitCubeText,
   getCubeZAxisTitleX,
+  cubeZMemberLabelMaxWidth,
   type CubeGeometry,
 } from "../../engine/cubeGeometry";
 import type { ResolvedCubeTheme } from "../../theme/cubeAppearance";
@@ -42,7 +43,7 @@ export const cubeAxesMarkup = (
     `<text x="${originX - 14}" y="${originY + index * yStep + options.cellHeight / 2 + 4}" text-anchor="end" class="member-label">${memberText(member.label, 78)}</text>`,
   ).join("");
   const zLabels = view.z.members.map((member, index) =>
-    `<text x="${originX + index * options.depthX + 3}" y="${originY - index * options.depthY - options.depthY - 8}" text-anchor="start" class="member-label">${memberText(member.label, 140)}</text>`,
+    `<text x="${originX + index * options.depthX + 3}" y="${originY - index * options.depthY - options.depthY - 8}" text-anchor="start" class="member-label">${memberText(member.label, cubeZMemberLabelMaxWidth)}</text>`,
   ).join("");
 
   return `<g class="cube-axes" fill="none" stroke="${theme.axisStroke}" stroke-width="${theme.axisStrokeWidth}" marker-end="url(#axis-arrow)"${axisDash}${lineCap}${lineJoin}>

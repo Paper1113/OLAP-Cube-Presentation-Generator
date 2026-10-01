@@ -41,20 +41,17 @@ export const defaultCubeGeometryOptions: CubeGeometryOptions = {
   fontFamily: "Aptos, Arial, sans-serif",
 };
 
-const maxMemberLabelLength = 16;
 const memberLabelFontSize = 12;
 const axisTitleFontSize = 14;
 const axisTitleFontWeight = 700;
 const axisTitleRightPadding = 24;
+export const cubeZMemberLabelMaxWidth = 140;
 
 export interface CubeTextMeasureOptions {
   fontFamily: string;
   fontSize: number;
   fontWeight?: number;
 }
-
-const shortenMemberLabel = (label: string): string =>
-  label.length > maxMemberLabelLength ? `${label.slice(0, maxMemberLabelLength - 1)}…` : label;
 
 const fallbackTextWidth = (text: string, fontSize: number): number =>
   Array.from(text).length * fontSize;
@@ -113,7 +110,10 @@ export const getCubeZAxisTitleX = (
   const zEndX = originX + zCount * options.depthX + 13;
   const lastZMemberIndex = Math.max(0, view.z.members.length - 1);
   const finalZLabelX = originX + lastZMemberIndex * options.depthX + 3;
-  const finalZLabel = shortenMemberLabel(view.z.members[lastZMemberIndex]?.label ?? "");
+  const finalZLabel = fitCubeText(view.z.members[lastZMemberIndex]?.label ?? "", cubeZMemberLabelMaxWidth, {
+    fontFamily: options.fontFamily,
+    fontSize: memberLabelFontSize,
+  });
   const finalZLabelWidth = measureCubeTextWidth(finalZLabel, {
     fontFamily: options.fontFamily,
     fontSize: memberLabelFontSize,
