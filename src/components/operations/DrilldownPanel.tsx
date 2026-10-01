@@ -74,8 +74,17 @@ export const DrilldownPanel = ({ dataset, activeLevels, drilldown, onChange }: D
             Dimension
             <select value={selectedDimension?.id ?? ""} onChange={(event) => chooseDimension(event.target.value)}>
               {dataset.dimensions.map((dimension) => {
+                const source = currentLevel(dimension, activeLevels);
+                const targets = lowerLevels(dimension, source?.id);
                 const available = hasAvailableTarget(dataset, activeLevels, dimension);
-                return <option key={dimension.id} value={dimension.id} disabled={!available}>{dimension.name}{available ? "" : " (no lower-level data)"}</option>;
+                const unavailableReason = targets.length === 0
+                  ? " (already at lowest level)"
+                  : " (no lower-level fact data)";
+                return (
+                  <option key={dimension.id} value={dimension.id} disabled={!available}>
+                    {dimension.name}{available ? "" : unavailableReason}
+                  </option>
+                );
               })}
             </select>
           </label>
