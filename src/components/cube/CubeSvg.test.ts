@@ -243,4 +243,26 @@ describe("cube SVG layout", () => {
     expect(svg).toContain(`data-full-text="${fullAxisName}"`);
     expect(svg).toContain("…");
   });
+
+  it("keeps full member labels in metadata when the visible label is fitted", () => {
+    const workspace = generateIndustryWorkspace({ title: "Member metadata sample", industryId: "furniture-home", year: 2032 });
+    const result = createCubeView(workspace.dataset, {
+      axisMapping: workspace.axisMapping,
+      activeLevels: workspace.activeLevels,
+      operation: { type: "original" },
+    });
+    const view = result.view!;
+    const fullMemberLabel = "WWWWWWWWWW";
+    const stressedView = {
+      ...view,
+      x: {
+        ...view.x,
+        members: view.x.members.map((member, index) => index === 0 ? { ...member, label: fullMemberLabel } : member),
+      },
+    };
+    const svg = createCubeSvgMarkup(stressedView);
+
+    expect(svg).toContain(`aria-label="${fullMemberLabel}"`);
+    expect(svg).toContain(`data-full-text="${fullMemberLabel}"`);
+  });
 });
