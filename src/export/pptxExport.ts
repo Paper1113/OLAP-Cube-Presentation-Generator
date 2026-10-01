@@ -1,7 +1,7 @@
 import PptxGenJS from "pptxgenjs";
 import { createCubeSvgMarkup } from "../components/cube/CubeSvg";
 import { createCubeView } from "../engine/cubeEngine";
-import { resolveRollupSourceLevel } from "../engine/hierarchy";
+import { getLevel, orderedLevels } from "../engine/hierarchy";
 import type { CubeDataset, CubeViewModel } from "../models/cube";
 import type {
   AxisMapping,
@@ -74,9 +74,11 @@ const currentLevelName = (
   dimensionId: string,
 ): string => {
   const dimension = getDimension(dataset, dimensionId);
-  const requested = activeLevels[dimensionId];
-  const fallback = [...(dimension?.levels ?? [])].sort((left, right) => left.order - right.order).at(-1)?.id;
-  return getLevelName(dataset, dimensionId, requested ?? fallback);
+  const requested = dimension && activeLevels[dimensionId]
+    ? getLevel(dimension, activeLevels[dimensionId])
+    : undefined;
+  const fallback = dimension ? orderedLevels(dimension).at(-1) : undefined;
+  return requested?.name ?? fallback?.name ?? "Current level";
 };
 
 const axisDetails = (view: CubeViewModel): string[] => [
@@ -108,13 +110,7 @@ const operationDetails = (
 
   const dimension = getDimension(input.dataset, operation.dimensionId);
   const dimensionName = dimension?.name ?? "Selected dimension";
-  const fromLevel = operation.type === "rollup" && dimension
-    ? resolveRollupSourceLevel(
-      dimension,
-      input.activeLevels[operation.dimensionId],
-      operation.sourceLevelId,
-    )?.name ?? "Current level"
-    : currentLevelName(input.dataset, input.activeLevels, operation.dimensionId);
+  const fromLevel = currentLevelName(input.dataset, input.activeLevels, operation.dimensionId);
   const toLevel = getLevelName(input.dataset, operation.dimensionId, operation.targetLevelId);
   return [`${dimensionName}: ${fromLevel} → ${toLevel}`, `Measure: ${input.dataset.measures[0]?.name ?? "Measure"} (SUM)`];
 };

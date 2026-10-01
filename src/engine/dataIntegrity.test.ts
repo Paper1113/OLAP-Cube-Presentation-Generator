@@ -10,12 +10,28 @@ describe("fact integrity across views and exports", () => {
   it("does not claim leaf-to-parent roll-up when only parent facts exist", () => {
     const w = workspace();
     const product = w.dataset.dimensions[1];
+    w.activeLevels.product = "product-item";
     w.dataset.facts.forEach((fact) => {
       fact.coordinates.product = product.levels[1].members.find((member) => member.id === fact.coordinates.product)!.parentMemberId!;
     });
     const result = createCubeView(w.dataset, { ...w, operation: { type: "rollup", dimensionId: "product", targetLevelId: "product-category" } });
     expect(result.view).toBeNull();
     expect(result.errors.join(" ")).toContain("source-level data");
+  });
+
+  it("does not expose Roll-up from a top-level default", () => {
+    const w = workspace();
+
+    expect(availableRollupTransition(
+      w.dataset,
+      w.dataset.dimensions.find((dimension) => dimension.id === "product")!,
+      w.activeLevels,
+    )).toBeUndefined();
+    expect(availableRollupTransition(
+      w.dataset,
+      w.dataset.dimensions.find((dimension) => dimension.id === "location")!,
+      w.activeLevels,
+    )).toBeUndefined();
   });
   it("rejects mixed-grain drill-down rather than silently losing coarse facts", () => {
     const w = workspace();
