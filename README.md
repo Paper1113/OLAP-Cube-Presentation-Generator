@@ -61,7 +61,7 @@ Advanced Settings is collapsed by default so first-time users are not required t
 - Cube axis mapping.
 - Dimension, hierarchy, category, product, country, and city editing.
 - Fact Data, where Month/Product/City are read-only contextual labels and only Sales can be edited or randomized.
-- **Apply Changes & Rebuild Facts**, which rebuilds the complete leaf-level Cartesian product after hierarchy edits, preserves Sales for coordinates that still exist, adds Sales for new combinations, and removes stale or duplicate combinations.
+- **Apply Changes & Rebuild Facts**, which rebuilds the complete leaf-level Cartesian product after hierarchy edits, preserves Sales and duplicate rows for coordinates that still exist, adds Sales for new combinations, and removes stale coordinates. Duplicate coordinate rows remain separate and continue to contribute to SUM totals; rebuilding does not silently deduplicate them.
 - Furniture sample and reset utilities.
 
 ## Local development

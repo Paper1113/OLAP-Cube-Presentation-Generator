@@ -219,4 +219,28 @@ describe("cube SVG layout", () => {
     expect(svg).toContain(`viewBox="${compactGeometry.viewBox}"`);
     expect(svg).not.toContain("Sample · Sales (SUM)");
   });
+
+  it("keeps full axis names in metadata when the visible title is fitted", () => {
+    const workspace = generateIndustryWorkspace({ title: "Metadata sample", industryId: "furniture-home", year: 2032 });
+    const result = createCubeView(workspace.dataset, {
+      axisMapping: workspace.axisMapping,
+      activeLevels: workspace.activeLevels,
+      operation: { type: "original" },
+    });
+    const view = result.view!;
+    const stressedView = {
+      ...view,
+      x: {
+        ...view.x,
+        dimensionName: "A Very Long Dimension Name That Must Fit",
+        levelName: "A Very Long Level Name That Must Fit",
+      },
+    };
+    const svg = createCubeSvgMarkup(stressedView);
+    const fullAxisName = "A Very Long Dimension Name That Must Fit · A Very Long Level Name That Must Fit →";
+
+    expect(svg).toContain(`aria-label="${fullAxisName}"`);
+    expect(svg).toContain(`data-full-text="${fullAxisName}"`);
+    expect(svg).toContain("…");
+  });
 });

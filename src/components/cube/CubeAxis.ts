@@ -25,7 +25,6 @@ export const cubeAxesMarkup = (
   // the available vertical axis length.
   const yAxisTitle = `${view.y.dimensionName} · ${view.y.levelName} ↑`;
   const yAxisTextOptions = { fontFamily: theme.fontFamily, fontSize: 14, fontWeight: 700 } as const;
-  const fittedYAxisTitle = fitCubeText(yAxisTitle, Math.max(48, yStart - originY - 12), yAxisTextOptions);
   const yAxisTitleX = Math.max(24, originX - 106);
   const zAxisTitleX = getCubeZAxisTitleX(view, originX, options);
   const axisDash = theme.axisStrokeDasharray ? ` stroke-dasharray="${theme.axisStrokeDasharray}"` : "";
@@ -34,7 +33,19 @@ export const cubeAxesMarkup = (
   const fontFamily = escapeSvgText(theme.fontFamily);
 
   const memberText = (text: string, width: number) => fittedSvgText(text, width, { fontFamily: theme.fontFamily, fontSize: 12 });
-  const axisText = (text: string, width: number) => fittedSvgText(text, width, { fontFamily: theme.fontFamily, fontSize: 14, fontWeight: 700 });
+  const axisText = (text: string, width: number) => {
+    const fitted = fitCubeText(text, width, yAxisTextOptions);
+    const fullText = escapeSvgText(text);
+    return {
+      fitted: escapeSvgText(fitted),
+      metadata: ` aria-label="${fullText}" data-full-text="${fullText}"`,
+    };
+  };
+  const xAxisTitle = `${view.x.dimensionName} · ${view.x.levelName} →`;
+  const xAxisText = axisText(xAxisTitle, xEnd - originX);
+  const yAxisText = axisText(yAxisTitle, Math.min(180, Math.max(48, yStart - originY - 12)));
+  const zAxisTitle = `${view.z.dimensionName} · ${view.z.levelName} ↗`;
+  const zAxisText = axisText(zAxisTitle, Math.min(320, geometry.width - zAxisTitleX - 24));
 
   const xLabels = view.x.members.map((member, index) =>
     `<text x="${originX + index * xStep + options.cellWidth / 2}" y="${xBottom + 27}" text-anchor="middle" class="member-label">${memberText(member.label, options.cellWidth - 8)}</text>`,
@@ -53,8 +64,8 @@ export const cubeAxesMarkup = (
   </g>
   <g font-family="${fontFamily}" font-size="12" fill="${theme.memberText}">${xLabels}${yLabels}${zLabels}</g>
   <g font-family="${fontFamily}" font-size="14" font-weight="700" fill="${theme.axisTitle}">
-    <text x="${(originX + xEnd) / 2}" y="${xBottom + 54}" text-anchor="middle">${axisText(`${view.x.dimensionName} · ${view.x.levelName} →`, xEnd - originX)}</text>
-    <text x="${yAxisTitleX}" y="${(originY + yStart) / 2}" text-anchor="middle" transform="rotate(-90 ${yAxisTitleX} ${(originY + yStart) / 2})">${fittedSvgText(fittedYAxisTitle, 180, yAxisTextOptions)}</text>
-    <text x="${zAxisTitleX}" y="${zEndY - 5}" text-anchor="start">${axisText(`${view.z.dimensionName} · ${view.z.levelName} ↗`, Math.min(320, geometry.width - zAxisTitleX - 24))}</text>
+    <text x="${(originX + xEnd) / 2}" y="${xBottom + 54}" text-anchor="middle"${xAxisText.metadata}>${xAxisText.fitted}</text>
+    <text x="${yAxisTitleX}" y="${(originY + yStart) / 2}" text-anchor="middle" transform="rotate(-90 ${yAxisTitleX} ${(originY + yStart) / 2})"${yAxisText.metadata}>${yAxisText.fitted}</text>
+    <text x="${zAxisTitleX}" y="${zEndY - 5}" text-anchor="start"${zAxisText.metadata}>${zAxisText.fitted}</text>
   </g>`;
 };
