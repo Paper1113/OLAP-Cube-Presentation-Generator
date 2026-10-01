@@ -64,7 +64,7 @@ const currentLevelFor = (
   const dimension = getDimension(dataset, dimensionId);
   if (!dimension) return undefined;
   const requested = activeLevels[dimensionId];
-  if (requested && getLevel(dimension, requested)) return requested;
+  if (requested) return getLevel(dimension, requested)?.id;
   return orderedLevels(dimension).at(-1)?.id;
 };
 
@@ -177,6 +177,7 @@ export const createCubeView = (dataset: CubeDataset, request: CubeRequest): Cube
   dataset.dimensions.forEach((dimension) => {
     const levelId = currentLevelFor(dataset, dimension.id, request.activeLevels);
     if (levelId) levels[dimension.id] = levelId;
+    else errors.push(`${dimension.name}: Original cube level is unavailable. Select an existing level in Advanced Settings.`);
   });
 
   if (errors.length > 0 || !measure) return { view: null, errors };
@@ -207,6 +208,7 @@ export const createCubeView = (dataset: CubeDataset, request: CubeRequest): Cube
   z.members = z.members.filter((member) => selections[z.dimensionId].includes(member.id));
 
   const aggregates = new Map<string, number>();
+  try {
   dataset.facts.forEach((fact) => {
     const mapped: Record<string, string> = {};
     const dimensions = [x, y, z];
@@ -224,6 +226,10 @@ export const createCubeView = (dataset: CubeDataset, request: CubeRequest): Cube
       addToAggregate(aggregates, cellKey(mapped[x.dimensionId], mapped[y.dimensionId], mapped[z.dimensionId]), value);
     }
   });
+
+  } catch (error) {
+    return { view: null, errors: [error instanceof Error ? error.message : "SUM failed."] };
+  }
 
   const cells: CubeCellView[] = [];
   x.members.forEach((xMember) => {

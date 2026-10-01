@@ -80,6 +80,14 @@ export const measureCubeTextWidth = (
   }
 };
 
+/** Pixel-based ellipsis shared by all SVG text; full text remains in a title tooltip. */
+export const fitCubeText = (text: string, maxWidth: number, options: CubeTextMeasureOptions): string => {
+  if (measureCubeTextWidth(text, options) <= maxWidth) return text;
+  const characters = Array.from(text);
+  while (characters.length && measureCubeTextWidth(`${characters.join("")}…`, options) > maxWidth) characters.pop();
+  return `${characters.join("")}…`;
+};
+
 export const getCubeZAxisTitleX = (
   view: Pick<CubeViewModel, "z">,
   originX: number,
@@ -131,11 +139,11 @@ export const createCubeGeometry = (
 
   const zAxisTitle = `${view.z.dimensionName} · ${view.z.levelName} ↗`;
   const zAxisTitleX = getCubeZAxisTitleX(view, originX, options);
-  const zAxisTitleWidth = measureCubeTextWidth(zAxisTitle, {
+  const zAxisTitleWidth = Math.min(320, measureCubeTextWidth(zAxisTitle, {
     fontFamily: options.fontFamily,
     fontSize: axisTitleFontSize,
     fontWeight: axisTitleFontWeight,
-  });
+  }));
   const width = Math.max(
     520,
     originX + view.x.members.length * xStep + view.z.members.length * options.depthX + 90,

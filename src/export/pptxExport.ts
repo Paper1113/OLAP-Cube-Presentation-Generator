@@ -1,42 +1,10 @@
 import PptxGenJS from "pptxgenjs";
 import { createCubeSvgMarkup } from "../components/cube/CubeSvg";
-import { createCubeView } from "../engine/cubeEngine";
-import { resolveRollupSourceLevel } from "../engine/hierarchy";
-import type { CubeDataset, CubeViewModel } from "../models/cube";
-import type {
-  AxisMapping,
-  OperationConfig,
-  OperationSettings,
-  OperationType,
-} from "../models/operation";
-import {
-  normalizeCubeAppearance,
-  type CubeAppearance,
-} from "../theme/cubeAppearance";
+import { normalizeCubeAppearance, type CubeAppearance } from "../theme/cubeAppearance";
 import { blobToDataUri, svgToPng } from "./pngExport";
 import { svgToDataUri } from "./svgExport";
-
-export interface PresentationInput {
-  dataset: CubeDataset;
-  axisMapping: AxisMapping;
-  activeLevels: Record<string, string>;
-  operations: OperationSettings;
-  appearance?: CubeAppearance;
-}
-
-export type PresentationSlideKind = "title" | OperationType;
-
-/** A serialisable slide model shared by the web preview and PPTX exporter. */
-export interface PresentationSlideModel {
-  number: number;
-  kind: PresentationSlideKind;
-  title: string;
-  subtitle?: string;
-  view: CubeViewModel | null;
-  details: string[];
-  description?: string;
-  errors: string[];
-}
+import { buildPresentationSlides, presentationErrors, type PresentationInput, type PresentationSlideModel } from "./presentationModel";
+export { buildPresentationSlides } from "./presentationModel";
 
 export interface ExportPresentationOptions extends PresentationInput {
   /** Used as the downloaded .pptx name. Defaults to the dataset title. */
@@ -45,123 +13,10 @@ export interface ExportPresentationOptions extends PresentationInput {
   imageFormat?: "svg" | "png";
 }
 
-const operationTitles: Record<OperationType, string> = {
-  original: "Original Data Cube",
-  slice: "Slice Operation",
-  dice: "Dice Operation",
-  rollup: "Roll-up Operation",
-  drilldown: "Drill-down Operation",
-};
-
-const getDimension = (dataset: CubeDataset, dimensionId: string) =>
-  dataset.dimensions.find((dimension) => dimension.id === dimensionId);
-
-const getLevelName = (dataset: CubeDataset, dimensionId: string, levelId: string | undefined): string => {
-  const level = getDimension(dataset, dimensionId)?.levels.find((candidate) => candidate.id === levelId);
-  return level?.name ?? "Current level";
-};
-
-const getMemberLabel = (dataset: CubeDataset, dimensionId: string, memberId: string): string => {
-  const member = getDimension(dataset, dimensionId)?.levels
-    .flatMap((level) => level.members)
-    .find((candidate) => candidate.id === memberId);
-  return member?.label ?? memberId;
-};
-
-const currentLevelName = (
-  dataset: CubeDataset,
-  activeLevels: Record<string, string>,
-  dimensionId: string,
-): string => {
-  const dimension = getDimension(dataset, dimensionId);
-  const requested = activeLevels[dimensionId];
-  const fallback = [...(dimension?.levels ?? [])].sort((left, right) => left.order - right.order).at(-1)?.id;
-  return getLevelName(dataset, dimensionId, requested ?? fallback);
-};
-
-const axisDetails = (view: CubeViewModel): string[] => [
-  `${view.x.dimensionName}: ${view.x.levelName}`,
-  `${view.y.dimensionName}: ${view.y.levelName}`,
-  `${view.z.dimensionName}: ${view.z.levelName}`,
-  `Measure: ${view.measure.name} (SUM)`,
-];
-
-const operationDetails = (
-  input: PresentationInput,
-  operation: OperationConfig,
-  view: CubeViewModel | null,
-): string[] => {
-  if (operation.type === "original") return view ? axisDetails(view) : [];
-
-  if (operation.type === "slice") {
-    const dimensionName = getDimension(input.dataset, operation.dimensionId)?.name ?? "Selected dimension";
-    return [`${dimensionName} = ${getMemberLabel(input.dataset, operation.dimensionId, operation.memberId)}`];
-  }
-
-  if (operation.type === "dice") {
-    return input.dataset.dimensions.map((candidate) => {
-      const labels = (operation.selections[candidate.id] ?? [])
-        .map((memberId) => getMemberLabel(input.dataset, candidate.id, memberId));
-      return `${candidate.name}: ${labels.length > 0 ? labels.join(", ") : "No members selected"}`;
-    });
-  }
-
-  const dimension = getDimension(input.dataset, operation.dimensionId);
-  const dimensionName = dimension?.name ?? "Selected dimension";
-  const fromLevel = operation.type === "rollup" && dimension
-    ? resolveRollupSourceLevel(
-      dimension,
-      input.activeLevels[operation.dimensionId],
-      operation.sourceLevelId,
-    )?.name ?? "Current level"
-    : currentLevelName(input.dataset, input.activeLevels, operation.dimensionId);
-  const toLevel = getLevelName(input.dataset, operation.dimensionId, operation.targetLevelId);
-  return [`${dimensionName}: ${fromLevel} → ${toLevel}`, `Measure: ${input.dataset.measures[0]?.name ?? "Measure"} (SUM)`];
-};
-
-const configuredOperations = (settings: OperationSettings): OperationConfig[] => [
-  { type: "original" },
-  { type: "slice", ...settings.slice },
-  { type: "dice", ...settings.dice },
-  { type: "rollup", ...settings.rollup },
-  { type: "drilldown", ...settings.drilldown },
-];
-
-/**
- * Derive the six presentation slides from the same immutable cube engine used
- * by the editor. No values or cube geometry are recalculated in this layer.
- */
-export const buildPresentationSlides = (input: PresentationInput): PresentationSlideModel[] => {
-  const titleSlide: PresentationSlideModel = {
-    number: 1,
-    kind: "title",
-    title: "OLAP Analysis",
-    subtitle: input.dataset.title || "OLAP Cube Presentation",
-    view: null,
-    details: ["Generated using OLAP Cube Presentation Generator"],
-    errors: [],
-  };
-
-  const operationSlides = configuredOperations(input.operations).map((operation, index) => {
-    const result = createCubeView(input.dataset, {
-      axisMapping: input.axisMapping,
-      activeLevels: input.activeLevels,
-      operation,
-    });
-    const view = result.view;
-
-    return {
-      number: index + 2,
-      kind: operation.type,
-      title: operationTitles[operation.type],
-      view,
-      details: operationDetails(input, operation, view),
-      description: view?.description,
-      errors: result.errors,
-    } satisfies PresentationSlideModel;
-  });
-
-  return [titleSlide, ...operationSlides];
+/** Conservative Unicode capacity: ellipsis is explicit, complete text is in speaker notes. */
+const fitSlideText = (text: string, capacity: number): string => {
+  const chars = Array.from(text);
+  return chars.length <= capacity ? text : `${chars.slice(0, capacity - 1).join("")}…`;
 };
 
 const safePptxFilename = (datasetTitle: string, requestedFilename?: string): string => {
@@ -217,7 +72,7 @@ const addPresentationFooter = (
     y: 7.12,
     w: 5.2,
     h: 0.18,
-    fontFace: "Aptos",
+    fontFace: "Arial Unicode MS",
     fontSize: 7,
     color: "6C7A86",
     margin: 0,
@@ -227,7 +82,7 @@ const addPresentationFooter = (
     y: 7.12,
     w: 0.62,
     h: 0.18,
-    fontFace: "Aptos",
+    fontFace: "Arial Unicode MS",
     fontSize: 7,
     color: "6C7A86",
     align: "right",
@@ -247,20 +102,24 @@ const addTitleSlide = (
     y: 2.35,
     w: 11.4,
     h: 0.62,
-    fontFace: "Aptos Display",
+    fontFace: "Arial Unicode MS",
     fontSize: 35,
     bold: true,
     color: "123047",
     margin: 0,
   });
-  slide.addText(slideModel.subtitle ?? "", {
+  slide.addNotes(slideModel.subtitle ?? "");
+  // Keep the title slide to one readable line; the complete title is retained
+  // in speaker notes and in the downloaded filename.
+  slide.addText(fitSlideText(slideModel.subtitle ?? "", 24), {
     x: 0.98,
     y: 3.14,
     w: 10.9,
-    h: 0.34,
-    fontFace: "Aptos",
-    fontSize: 18,
+    h: 0.42,
+    fontFace: "Arial Unicode MS",
+    fontSize: 16,
     color: "496576",
+    breakLine: false,
     margin: 0,
   });
   slide.addText("Generated using OLAP Cube Presentation Generator", {
@@ -268,7 +127,7 @@ const addTitleSlide = (
     y: 4.4,
     w: 7.5,
     h: 0.24,
-    fontFace: "Aptos",
+    fontFace: "Arial Unicode MS",
     fontSize: 10,
     color: "6C7A86",
     margin: 0,
@@ -290,7 +149,7 @@ const addCubeSlide = async (
     y: 0.38,
     w: 8.1,
     h: 0.42,
-    fontFace: "Aptos Display",
+    fontFace: "Arial Unicode MS",
     fontSize: 24,
     bold: true,
     color: "123047",
@@ -309,7 +168,7 @@ const addCubeSlide = async (
       y: 2.45,
       w: 7.45,
       h: 1.0,
-      fontFace: "Aptos",
+      fontFace: "Arial Unicode MS",
       fontSize: 16,
       color: "8A3030",
       breakLine: false,
@@ -317,12 +176,14 @@ const addCubeSlide = async (
     });
   }
 
-  slide.addText(slideBodyText(slideModel), {
+  slide.addNotes(slideBodyText(slideModel));
+  slide.addText(fitSlideText(slideBodyText(slideModel), 580), {
     x: 8.9,
     y: 1.45,
     w: 3.78,
     h: 4.95,
-    fontFace: "Aptos",
+    fit: "shrink",
+    fontFace: "Arial Unicode MS",
     fontSize: 13,
     color: "183C52",
     breakLine: false,
@@ -340,6 +201,8 @@ export const exportPresentation = async (
   options: ExportPresentationOptions,
 ): Promise<PresentationSlideModel[]> => {
   const slides = buildPresentationSlides(options);
+  const errors = presentationErrors(slides);
+  if (errors.length) throw new Error(`PowerPoint blocked:\n${errors.join("\n")}`);
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_WIDE";
   pptx.author = "OLAP Cube Presentation Generator";
@@ -347,8 +210,8 @@ export const exportPresentation = async (
   pptx.subject = options.dataset.title;
   pptx.title = `OLAP Analysis - ${options.dataset.title}`;
   pptx.theme = {
-    headFontFace: "Aptos Display",
-    bodyFontFace: "Aptos",
+    headFontFace: "Arial Unicode MS",
+    bodyFontFace: "Arial Unicode MS",
   };
 
   const appearance = normalizeCubeAppearance(options.appearance);

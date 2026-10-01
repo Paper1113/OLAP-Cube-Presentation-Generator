@@ -28,6 +28,7 @@ export const isWorkspaceState = (value: unknown): value is WorkspaceState => {
     && arrayOf(dataset.measures, (measure) => record(measure)
       && typeof measure.id === "string" && typeof measure.name === "string" && measure.aggregation === "sum")
     && arrayOf(dataset.facts, (fact) => record(fact) && strings(fact.coordinates)
+      && (fact.measureInputs === undefined || strings(fact.measureInputs))
       && record(fact.measures) && Object.values(fact.measures).every((entry) => typeof entry === "number" && Number.isFinite(entry)))
     && record(value.axisMapping) && ["x", "y", "z"].every((axis) => typeof (value.axisMapping as Record<string, unknown>)[axis] === "string")
     && strings(value.activeLevels)
@@ -49,11 +50,12 @@ export const loadWorkspace = (): WorkspaceState | null => {
   }
 };
 
-export const saveWorkspace = (workspace: WorkspaceState): void => {
+export const saveWorkspace = (workspace: WorkspaceState): boolean => {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(workspace));
+    return true;
   } catch {
-    // The app remains usable when local storage is blocked or full.
+    return false;
   }
 };
 

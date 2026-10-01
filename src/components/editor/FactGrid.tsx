@@ -1,3 +1,4 @@
+import { setFactMeasureInput, factMeasureError } from "../../utils/factInput";
 import type { CubeDataset, FactRecord } from "../../models/cube";
 import { getMember, orderedLevels } from "../../engine/hierarchy";
 import { RANDOM_SALES_MAX, RANDOM_SALES_MIN, randomSalesValue } from "../../utils/factRandomizer";
@@ -9,7 +10,7 @@ interface FactGridProps {
 }
 
 const leafLevelName = (dimension: CubeDataset["dimensions"][number]): string =>
-  [...orderedLevels(dimension)].reverse().find((level) => level.members.length > 0)?.name ?? dimension.name;
+  orderedLevels(dimension).at(-1)?.name ?? dimension.name;
 
 const coordinateLabel = (fact: FactRecord, dimension: CubeDataset["dimensions"][number]): string => {
   const memberId = fact.coordinates[dimension.id];
@@ -29,10 +30,7 @@ export const FactGrid = ({ dataset, onDatasetChange, onRefreshAllSales }: FactGr
 
   const setSales = (fact: FactRecord, rawValue: string): FactRecord => {
     if (!measure) return fact;
-    const value = Number(rawValue);
-    return Number.isFinite(value)
-      ? { ...fact, measures: { ...fact.measures, [measure.id]: value } }
-      : fact;
+    return setFactMeasureInput(fact, measure.id, rawValue);
   };
 
   return (
@@ -64,9 +62,11 @@ export const FactGrid = ({ dataset, onDatasetChange, onRefreshAllSales }: FactGr
                   <div className="fact-cell-control">
                     <input
                       aria-label={`${measure?.name ?? "Sales"} for row ${rowIndex + 1}`}
-                      type="number"
-                      step="1"
-                      value={measure ? fact.measures[measure.id] ?? "" : ""}
+                      type="text"
+                      inputMode="decimal"
+                      aria-invalid={measure ? Boolean(factMeasureError(fact, measure.id)) : false}
+                      aria-describedby={`sales-error-${rowIndex}`}
+                      value={measure ? fact.measureInputs?.[measure.id] ?? fact.measures[measure.id] ?? "" : ""}
                       onChange={(event) => updateFact(rowIndex, (current) => setSales(current, event.target.value))}
                       disabled={!measure}
                     />
@@ -78,15 +78,13 @@ export const FactGrid = ({ dataset, onDatasetChange, onRefreshAllSales }: FactGr
                       disabled={!measure}
                       onClick={() => {
                         if (!measure) return;
-                        updateFact(rowIndex, (current) => ({
-                          ...current,
-                          measures: { ...current.measures, [measure.id]: randomSalesValue() },
-                        }));
+                        updateFact(rowIndex, (current) => setFactMeasureInput(current, measure.id, String(randomSalesValue())));
                       }}
                     >
                       🎲
                     </button>
                   </div>
+                  <small id={`sales-error-${rowIndex}`} role="status">{measure ? factMeasureError(fact, measure.id) : ""}</small>
                 </td>
               </tr>
             ))}

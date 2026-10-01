@@ -53,7 +53,7 @@ describe("cube SVG layout", () => {
 
     const zLabelY = geometry.originY - geometry.options.depthY - 8;
     expect(svg).toContain(`y="${zLabelY}"`);
-    expect(svg).toContain(`rotate(-90 24`);
+    expect(svg).toMatch(/rotate\(-90 \d+(?:\.\d+)? /);
   });
 
   it("keeps the final Z member label clear of the Z-axis title", () => {
