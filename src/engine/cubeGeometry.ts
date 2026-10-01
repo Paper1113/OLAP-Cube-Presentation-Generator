@@ -108,20 +108,20 @@ export const getCubeZAxisTitleX = (
 ): number => {
   const zCount = Math.max(1, view.z.members.length);
   const zEndX = originX + zCount * options.depthX + 13;
-  const lastZMemberIndex = Math.max(0, view.z.members.length - 1);
-  const finalZLabelX = originX + lastZMemberIndex * options.depthX + 3;
-  const finalZLabel = fitCubeText(view.z.members[lastZMemberIndex]?.label ?? "", cubeZMemberLabelMaxWidth, {
+  const zLabelOptions = {
     fontFamily: options.fontFamily,
     fontSize: memberLabelFontSize,
-  });
-  const finalZLabelWidth = measureCubeTextWidth(finalZLabel, {
-    fontFamily: options.fontFamily,
-    fontSize: memberLabelFontSize,
-  });
+  } as const;
+  const maxZLabelRight = view.z.members.reduce((rightEdge, member, index) => {
+    const fittedLabel = fitCubeText(member.label, cubeZMemberLabelMaxWidth, zLabelOptions);
+    const labelRight = originX + index * options.depthX + 3
+      + measureCubeTextWidth(fittedLabel, zLabelOptions);
+    return Math.max(rightEdge, labelRight);
+  }, originX);
 
   return Math.max(
     zEndX + 8,
-    finalZLabelX + finalZLabelWidth + 12,
+    maxZLabelRight + 12,
   );
 };
 

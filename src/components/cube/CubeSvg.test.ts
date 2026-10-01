@@ -129,6 +129,46 @@ describe("cube SVG layout", () => {
     );
   });
 
+  it("reserves the widest fitted Z label, not only the final label", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "Penultimate label sample",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.5,
+    });
+    const result = createCubeView(workspace.dataset, {
+      axisMapping: workspace.axisMapping,
+      activeLevels: workspace.activeLevels,
+      operation: { type: "original" },
+    });
+    const view = result.view!;
+    const penultimateIndex = view.z.members.length - 2;
+    const longLabel = "W".repeat(24);
+    const stressedView = {
+      ...view,
+      z: {
+        ...view.z,
+        members: view.z.members.map((member, index) => index === penultimateIndex
+          ? { ...member, label: longLabel }
+          : member),
+      },
+    };
+    const geometry = createCubeGeometry(stressedView);
+    const fittedLabel = fitCubeText(longLabel, cubeZMemberLabelMaxWidth, {
+      fontFamily: geometry.options.fontFamily,
+      fontSize: 12,
+    });
+    const penultimateLabelX = geometry.originX + penultimateIndex * geometry.options.depthX + 3;
+    const expectedZAxisTitleX = getCubeZAxisTitleX(stressedView, geometry.originX, geometry.options);
+
+    expect(expectedZAxisTitleX).toBeGreaterThanOrEqual(
+      penultimateLabelX + measureCubeTextWidth(fittedLabel, {
+        fontFamily: geometry.options.fontFamily,
+        fontSize: 12,
+      }) + 12,
+    );
+  });
+
   it("measures wide glyphs before placing the final Z label and axis title", () => {
     const workspace = generateIndustryWorkspace({
       title: "ViewBox sample",
