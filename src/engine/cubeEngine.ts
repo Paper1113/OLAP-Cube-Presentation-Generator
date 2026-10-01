@@ -18,7 +18,7 @@ import {
   memberAtLevel,
   membersAtLevel,
   orderedLevels,
-  resolveRollupSourceLevel,
+  rollupSourceLevel,
 } from "./hierarchy";
 
 export interface CubeRequest {
@@ -94,11 +94,7 @@ const resolveOperationLevels = (
   const targetLevel = dimension ? getLevel(dimension, operation.targetLevelId) : undefined;
   const sourceLevel = dimension
     ? operation.type === "rollup"
-      ? resolveRollupSourceLevel(
-        dimension,
-        levels[operation.dimensionId],
-        operation.sourceLevelId,
-      )
+      ? rollupSourceLevel(dimension, levels[operation.dimensionId])
       : getLevel(dimension, levels[operation.dimensionId])
     : undefined;
   if (!dimension || !sourceLevel || !targetLevel) {
@@ -182,6 +178,7 @@ export const createCubeView = (dataset: CubeDataset, request: CubeRequest): Cube
 
   if (errors.length > 0 || !measure) return { view: null, errors };
 
+  const sourceLevels = { ...levels };
   errors.push(...resolveOperationLevels(dataset, request, levels));
   const { selections, errors: selectionErrors } = selectionsFor(dataset, request, levels);
   errors.push(...selectionErrors);
@@ -258,7 +255,7 @@ export const createCubeView = (dataset: CubeDataset, request: CubeRequest): Cube
       z,
       cells,
       operationLabel: operationLabel[request.operation.type],
-      description: describeOperation(dataset, request.operation, request.activeLevels),
+      description: describeOperation(dataset, request.operation, sourceLevels),
     },
     errors: [],
   };
@@ -271,7 +268,7 @@ export const canDrillDown = (
   targetLevelId: string,
 ): boolean => {
   const dimension = getDimension(dataset, dimensionId);
-  const sourceLevelId = activeLevels[dimensionId];
+  const sourceLevelId = currentLevelFor(dataset, dimensionId, activeLevels);
   if (!dimension || !sourceLevelId) return false;
   return levelIndex(dimension, sourceLevelId) >= 0
     && levelIndex(dimension, targetLevelId) > levelIndex(dimension, sourceLevelId)

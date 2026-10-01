@@ -1,7 +1,7 @@
 import type { CubeDataset } from "../../models/cube";
 import type { Dimension, DimensionLevel } from "../../models/dimension";
 import type { OperationSettings } from "../../models/operation";
-import { getLevel, orderedLevels, rollupSourceLevel, hasFactDataAtLevel } from "../../engine/hierarchy";
+import { getLevel, orderedLevels, hasFactDataAtLevel } from "../../engine/hierarchy";
 
 export interface RollupPanelProps {
   dataset: CubeDataset;
@@ -15,7 +15,10 @@ const currentLevel = (
   activeLevels: Record<string, string>,
 ): DimensionLevel | undefined => {
   const requestedId = activeLevels[dimension.id];
-  if (requestedId) return getLevel(dimension, requestedId);
+  if (requestedId) {
+    const requestedLevel = getLevel(dimension, requestedId);
+    if (requestedLevel) return requestedLevel;
+  }
   return orderedLevels(dimension).at(-1);
 };
 
@@ -31,23 +34,17 @@ export interface RollupTransition {
 }
 
 /**
- * Returns the normal current-level transition, or a leaf-to-current-level
- * transition when the visible default is already at the top of a dimension.
- * This keeps Product and Location roll-ups available alongside Drill-down-ready
- * Category and Country defaults without inventing any facts.
+ * Returns only transitions from the level currently shown by the cube. A
+ * top-level default therefore has no Roll-up target, while switching the
+ * original level to a lower level exposes its fact-backed ancestors.
  */
 const rollupTransition = (
   dimension: Dimension,
   activeLevels: Record<string, string>,
 ): RollupTransition | undefined => {
   const visibleLevel = currentLevel(dimension, activeLevels);
-  const sourceLevel = rollupSourceLevel(dimension, visibleLevel?.id);
-  if (!visibleLevel || !sourceLevel) return undefined;
-
-  const visibleTargets = higherLevels(dimension, visibleLevel.id);
-  if (visibleTargets.length > 0) return { sourceLevel: visibleLevel, targets: visibleTargets };
-
-  return { sourceLevel, targets: [visibleLevel] };
+  if (!visibleLevel) return undefined;
+  return { sourceLevel: visibleLevel, targets: higherLevels(dimension, visibleLevel.id) };
 };
 
 export const availableRollupTransition = (
@@ -76,16 +73,9 @@ export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupP
     ?? rollupDimensions[0]
     ?? dataset.dimensions[0];
   const transition = selectedDimension ? availableTransition(selectedDimension) : undefined;
-  const configuredSourceLevel = selectedDimension && rollup.sourceLevelId
-    ? getLevel(selectedDimension, rollup.sourceLevelId)
-    : undefined;
-  const sourceLevel = configuredSourceLevel?.id === transition?.sourceLevel.id
-    ? configuredSourceLevel
-    : transition?.sourceLevel;
-  const targets = selectedDimension && sourceLevel
-    ? higherLevels(selectedDimension, sourceLevel.id)
-      .filter((level) => transition?.targets.some((target) => target.id === level.id) ?? false)
-    : [];
+  const sourceLevel = transition?.sourceLevel
+    ?? (selectedDimension ? currentLevel(selectedDimension, activeLevels) : undefined);
+  const targets = transition?.targets ?? [];
   const targetIsAvailable = targets.some((level) => level.id === rollup.targetLevelId);
 
   const chooseDimension = (dimensionId: string) => {

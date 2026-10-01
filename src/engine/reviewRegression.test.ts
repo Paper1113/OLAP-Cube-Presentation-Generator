@@ -58,7 +58,10 @@ it('preserves existing Sales when a valid leaf member is added', () => {
   leaf.members.push({ id: 'product-new', label: 'New product', levelId: leaf.id, parentMemberId: leaf.members[0].parentMemberId });
 
   const synchronized = synchronizeLeafFacts(w.dataset, () => 0);
-  expect(synchronized.facts).toHaveLength(12 * 5 * 3);
+  const timeCount = w.dataset.dimensions.find((dimension) => dimension.id === "time")!.levels.at(-1)!.members.length;
+  const productCount = product.levels.at(-1)!.members.length;
+  const locationCount = w.dataset.dimensions.find((dimension) => dimension.id === "location")!.levels.at(-1)!.members.length;
+  expect(synchronized.facts).toHaveLength(timeCount * productCount * locationCount);
   expect(synchronized.facts.find((fact) => fact.coordinates === existing.coordinates)).toBe(existing);
   expect(synchronized.facts.filter((fact) => fact.coordinates.product === 'product-new').every((fact) => fact.measures.sales === 100)).toBe(true);
 });

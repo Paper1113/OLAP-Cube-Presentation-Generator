@@ -196,7 +196,7 @@ describe("cube engine", () => {
     expect(cellValue(result, "q1", "sofa", "australia")).toBe(300);
   });
 
-  it("uses the configured source level when the visible default is already at the top", () => {
+  it("does not let persisted source metadata bypass the current level", () => {
     const result = createCubeView(createTestDataset(), {
       axisMapping,
       activeLevels: {
@@ -211,10 +211,8 @@ describe("cube engine", () => {
         targetLevelId: "product-category",
       },
     });
-    const view = expectView(result);
-
-    expect(view.y.levelId).toBe("product-category");
-    expect(cellValue(result, "q1", "seating", "australia")).toBe(300);
+    expect(result.view).toBeNull();
+    expect(result.errors).toContain("Roll-up must move to a higher hierarchy level.");
   });
 
   it("refreshes a stale configured source after the active level changes", () => {

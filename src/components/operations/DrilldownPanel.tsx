@@ -16,7 +16,10 @@ const currentLevel = (
   activeLevels: Record<string, string>,
 ): DimensionLevel | undefined => {
   const requestedId = activeLevels[dimension.id];
-  if (requestedId) return getLevel(dimension, requestedId);
+  if (requestedId) {
+    const requestedLevel = getLevel(dimension, requestedId);
+    if (requestedLevel) return requestedLevel;
+  }
   return orderedLevels(dimension).at(-1);
 };
 

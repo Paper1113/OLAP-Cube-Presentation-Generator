@@ -1,5 +1,5 @@
 import { createCubeView } from "../engine/cubeEngine";
-import { resolveRollupSourceLevel } from "../engine/hierarchy";
+import { rollupSourceLevel } from "../engine/hierarchy";
 import type { CubeDataset, CubeViewModel } from "../models/cube";
 import type { AxisMapping, OperationConfig, OperationSettings, OperationType } from "../models/operation";
 import type { CubeAppearance } from "../theme/cubeAppearance";
@@ -90,11 +90,7 @@ const operationDetails = (
   const dimension = getDimension(input.dataset, operation.dimensionId);
   const dimensionName = dimension?.name ?? "Selected dimension";
   const fromLevel = operation.type === "rollup" && dimension
-    ? resolveRollupSourceLevel(
-      dimension,
-      input.activeLevels[operation.dimensionId],
-      operation.sourceLevelId,
-    )?.name ?? "Current level"
+    ? rollupSourceLevel(dimension, input.activeLevels[operation.dimensionId])?.name ?? "Current level"
     : currentLevelName(input.dataset, input.activeLevels, operation.dimensionId);
   const toLevel = getLevelName(input.dataset, operation.dimensionId, operation.targetLevelId);
   return [`${dimensionName}: ${fromLevel} → ${toLevel}`, `Measure: ${input.dataset.measures[0]?.name ?? "Measure"} (SUM)`];

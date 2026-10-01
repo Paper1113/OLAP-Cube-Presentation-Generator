@@ -18,7 +18,7 @@ Product    Category → Product
 Location   Country → City
 ```
 
-Raw facts stay at Month × Product × City. The standard cube contains 12 months, 4 products, 3 cities, and 144 Sales facts. Quarter, Category, and Country values are derived by the existing SUM aggregation engine rather than stored as duplicate facts.
+Raw facts stay at Month × Product × City. Every industry includes 12 months, at least two products per category, and cities linked to each country. The fact count is 12 × product count × city count (288 for Furniture & Home Living). Quarter, Category, and Country totals are derived using SUM. Drill-down supports Quarter → Month, Category → Product, and Country → City using these generated facts; Time also supports Year → Quarter or Month. Singapore and Hong Kong retain their single-city examples. To load expanded presets into a saved workspace, choose Regenerate Dataset; this replaces its hierarchy and facts. Refresh Sales Data only updates existing values.
 
 The available industry samples are:
 
@@ -49,7 +49,7 @@ The core controls remain outside Advanced Settings:
 1. **Original** — Quarterly Sales by Product Category and Country.
 2. **Slice** — Fix one member, such as a City.
 3. **Dice** — Select member subsets across all three dimensions.
-4. **Roll-up** — Aggregate Quarter to Year, Product to Category, or City to Country.
+4. **Roll-up** — Aggregate the currently visible level to a higher fact-backed level. For example, Quarter to Year, Product to Category, or City to Country after selecting that source level in Advanced Settings.
 5. **Drill-down** — Expand Quarter to Month, Country to City, or Category to Product.
 
 The current diagram can be exported as SVG or high-resolution PNG, and the generated workspace can be rendered in the presentation preview or downloaded as a six-slide PowerPoint file.

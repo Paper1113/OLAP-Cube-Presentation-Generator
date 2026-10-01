@@ -70,6 +70,185 @@ describe("cube SVG layout", () => {
     expect(svg).toMatch(/rotate\(-90 \d+(?:\.\d+)? /);
   });
 
+  it("keeps front-most values readable while retaining every cell title", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "Layer sample",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.5,
+    });
+    const result = createCubeView(workspace.dataset, {
+      axisMapping: workspace.axisMapping,
+      activeLevels: workspace.activeLevels,
+      operation: { type: "original" },
+    });
+    const view = result.view!;
+    const svg = createCubeSvgMarkup(view);
+
+    expect(svg.match(/data-cube-value="true"/g)!.length).toBeGreaterThan(0);
+    expect(svg.match(/data-cube-value="true"/g)!.length).toBeLessThan(view.cells.length);
+    expect(svg.match(/<title>/g)).toHaveLength(view.cells.length);
+    expect(svg).toContain('data-depth-index="0"');
+    expect(svg.indexOf('class="cube-values"')).toBeGreaterThan(svg.lastIndexOf('class="cube-cell"'));
+  });
+
+  it("prevents projected depth labels from overprinting when Time is the Z axis", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "Depth collision sample",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.5,
+    });
+    const result = createCubeView(workspace.dataset, {
+      axisMapping: { x: "product", y: "location", z: "time" },
+      activeLevels: workspace.activeLevels,
+      operation: { type: "original" },
+    });
+    const view = result.view!;
+    const svg = createCubeSvgMarkup(view);
+
+    expect(svg.match(/data-cube-value="true"/g)!.length).toBeLessThan(view.cells.length);
+    expect(svg.match(/<title>/g)).toHaveLength(view.cells.length);
+  });
+
+  it("lets a later empty front cell occlude a colliding rear value", () => {
+    const view = {
+      datasetTitle: "Sparse depth sample",
+      measure: { id: "sales", name: "Sales", aggregation: "sum" as const },
+      x: {
+        dimensionId: "product",
+        dimensionName: "Product",
+        levelId: "product-category",
+        levelName: "Category",
+        members: [{ id: "x0", label: "X0" }, { id: "x1", label: "X1" }],
+      },
+      y: {
+        dimensionId: "location",
+        dimensionName: "Location",
+        levelId: "location-country",
+        levelName: "Country",
+        members: [{ id: "y0", label: "Y0" }, { id: "y1", label: "Y1" }],
+      },
+      z: {
+        dimensionId: "time",
+        dimensionName: "Time",
+        levelId: "time-quarter",
+        levelName: "Quarter",
+        members: [
+          { id: "z0", label: "Z0" },
+          { id: "z1", label: "Z1" },
+          { id: "z2", label: "Z2" },
+          { id: "z3", label: "Z3" },
+        ],
+      },
+      cells: [
+        { xMemberId: "x0", yMemberId: "y1", zMemberId: "z3", value: 999, hasData: true },
+        { xMemberId: "x1", yMemberId: "y0", zMemberId: "z0", value: 0, hasData: false },
+      ],
+      operationLabel: "Original OLAP Cube",
+      description: "Sparse depth sample.",
+    };
+    const svg = createCubeSvgMarkup(view);
+
+    expect(svg.match(/data-cube-value="true"/g)).toHaveLength(1);
+    expect(svg).toContain('data-cube-value="true"');
+    expect(svg).toContain(">—</text>");
+    expect(svg).not.toContain('data-cube-value="true" data-depth-index="3"');
+    expect(svg).toContain("Sales: 999");
+    expect(svg).toContain("No fact data");
+  });
+
+  it("hides a rear label covered by a later face without label collision", () => {
+    const view = {
+      datasetTitle: "Face occlusion sample",
+      measure: { id: "sales", name: "Sales", aggregation: "sum" as const },
+      x: {
+        dimensionId: "product",
+        dimensionName: "Product",
+        levelId: "product-category",
+        levelName: "Category",
+        members: [{ id: "x0", label: "X0" }, { id: "x1", label: "X1" }],
+      },
+      y: {
+        dimensionId: "location",
+        dimensionName: "Location",
+        levelId: "location-country",
+        levelName: "Country",
+        members: [{ id: "y0", label: "Y0" }, { id: "y1", label: "Y1" }],
+      },
+      z: {
+        dimensionId: "time",
+        dimensionName: "Time",
+        levelId: "time-quarter",
+        levelName: "Quarter",
+        members: [
+          { id: "z0", label: "Z0" },
+          { id: "z1", label: "Z1" },
+          { id: "z2", label: "Z2" },
+        ],
+      },
+      cells: [
+        { xMemberId: "x0", yMemberId: "y1", zMemberId: "z2", value: 1, hasData: true },
+        { xMemberId: "x1", yMemberId: "y0", zMemberId: "z0", value: 2, hasData: true },
+      ],
+      operationLabel: "Original OLAP Cube",
+      description: "Face occlusion sample.",
+    };
+    const svg = createCubeSvgMarkup(view);
+
+    expect(svg.match(/data-cube-value="true"/g)).toHaveLength(1);
+    expect(svg).toMatch(/data-cube-value="true" data-depth-index="0"[^>]*>2<\/text>/);
+    expect(svg).not.toMatch(/data-cube-value="true" data-depth-index="2"/);
+    expect(svg).toContain("Sales: 1");
+    expect(svg).toContain("Sales: 2");
+  });
+
+  it("hides a rear label covered by a later sloped face", () => {
+    const view = {
+      datasetTitle: "Sloped face occlusion sample",
+      measure: { id: "sales", name: "Sales", aggregation: "sum" as const },
+      x: {
+        dimensionId: "product",
+        dimensionName: "Product",
+        levelId: "product-category",
+        levelName: "Category",
+        members: [{ id: "x0", label: "X0" }],
+      },
+      y: {
+        dimensionId: "location",
+        dimensionName: "Location",
+        levelId: "location-country",
+        levelName: "Country",
+        members: [{ id: "y0", label: "Y0" }],
+      },
+      z: {
+        dimensionId: "time",
+        dimensionName: "Time",
+        levelId: "time-quarter",
+        levelName: "Quarter",
+        members: [
+          { id: "z0", label: "Z0" },
+          { id: "z1", label: "Z1" },
+          { id: "z2", label: "Z2" },
+          { id: "z3", label: "Z3" },
+        ],
+      },
+      cells: [
+        { xMemberId: "x0", yMemberId: "y0", zMemberId: "z3", value: 1, hasData: true },
+        { xMemberId: "x0", yMemberId: "y0", zMemberId: "z1", value: 2, hasData: true },
+      ],
+      operationLabel: "Original OLAP Cube",
+      description: "Sloped face occlusion sample.",
+    };
+    const svg = createCubeSvgMarkup(view);
+
+    expect(svg.match(/data-cube-value="true"/g)).toHaveLength(1);
+    expect(svg).toMatch(/data-cube-value="true" data-depth-index="1"[^>]*>2<\/text>/);
+    expect(svg).not.toMatch(/data-cube-value="true" data-depth-index="3"/);
+    expect(svg).toContain("Sales: 1");
+    expect(svg).toContain("Sales: 2");
+  });
+
   it("keeps the final Z member label clear of the Z-axis title", () => {
     const workspace = generateIndustryWorkspace({
       title: "Layout sample",
