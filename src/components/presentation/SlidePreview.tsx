@@ -1,5 +1,5 @@
 import { CubeRenderer } from "../cube/CubeRenderer";
-import type { PresentationSlideModel } from "../../export/pptxExport";
+import type { PresentationSlideModel } from "../../export/presentationModel";
 import type { CubeAppearance } from "../../theme/cubeAppearance";
 
 export interface SlidePreviewProps {

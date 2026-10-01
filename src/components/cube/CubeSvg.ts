@@ -1,6 +1,7 @@
 import type { CubeViewModel } from "../../models/cube";
 import {
   createCubeGeometry,
+  fitCubeText,
   measureCubeTextWidth,
   type CubeCellGeometry,
   type CubeGeometryOptions,
@@ -18,7 +19,7 @@ import {
   cubeCellValuePosition,
   cubeCellValueStrokeWidth,
 } from "./CubeCell";
-import { escapeSvgText } from "./CubeLabels";
+import { escapeSvgText, fittedSvgText } from "./CubeLabels";
 
 export interface CubeSvgOptions {
   id?: string;
@@ -51,7 +52,12 @@ const valueLabelBounds = (
 ): ValueLabelBounds => {
   const fontSize = cubeCellValueFontSize(valueCell.geometry, options);
   const position = cubeCellValuePosition(valueCell.geometry, options);
-  const width = measureCubeTextWidth(cubeCellValueLabel(valueCell.cell), {
+  const label = fitCubeText(cubeCellValueLabel(valueCell.cell), options.cellWidth - 10, {
+    fontFamily: options.fontFamily,
+    fontSize,
+    fontWeight: theme.valueFontWeight,
+  });
+  const width = measureCubeTextWidth(label, {
     fontFamily: options.fontFamily,
     fontSize,
     fontWeight: theme.valueFontWeight,
@@ -206,7 +212,7 @@ export const createCubeSvgMarkup = (view: CubeViewModel, options: CubeSvgOptions
     <desc id="cube-description">${escapeSvgText(view.description)}</desc>
     <rect width="100%" height="100%" fill="${theme.background}" />
     <defs><marker id="axis-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="${theme.markerFill}" /></marker></defs>
-    ${includeTitle ? `<text x="24" y="34" font-family="${fontFamily}" font-size="19" font-weight="700" fill="${theme.titleFill}">${escapeSvgText(view.operationLabel)}</text><text x="24" y="56" font-family="${fontFamily}" font-size="12" fill="${theme.subtitleFill}">${escapeSvgText(`${view.datasetTitle} · ${view.measure.name} (SUM)`)}</text>` : ""}
+    ${includeTitle ? `<text x="24" y="34" font-family="${fontFamily}" font-size="19" font-weight="700" fill="${theme.titleFill}">${fittedSvgText(view.operationLabel, geometry.width - 48, { fontFamily: theme.fontFamily, fontSize: 19, fontWeight: 700 })}</text><text x="24" y="56" font-family="${fontFamily}" font-size="12" fill="${theme.subtitleFill}">${fittedSvgText(`${view.datasetTitle} · ${view.measure.name} (SUM)`, geometry.width - 48, { fontFamily: theme.fontFamily, fontSize: 12 })}</text>` : ""}
     ${cellsMarkup}
     <g class="cube-values">${valueMarkup}</g>
     ${cubeAxesMarkup(view, geometry, theme)}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   buildPresentationSlides,
   type PresentationInput,
-} from "../../export/pptxExport";
+} from "../../export/presentationModel";
 import { normalizeCubeAppearance } from "../../theme/cubeAppearance";
 import { SlidePreview } from "./SlidePreview";
 

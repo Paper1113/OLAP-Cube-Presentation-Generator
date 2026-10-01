@@ -335,7 +335,7 @@ describe("industry workspace generator", () => {
     });
   });
 
-  it("synchronizes advanced hierarchy edits to one complete, de-duplicated leaf grid", () => {
+  it("synchronizes advanced hierarchy edits while retaining duplicate facts and their totals", () => {
     const workspace = generateIndustryWorkspace({
       title: "Furniture analysis",
       industryId: "furniture-home",
@@ -362,7 +362,7 @@ describe("industry workspace generator", () => {
       fact.coordinates.location,
     ].join("\u0000")));
 
-    expect(synchronized.facts).toHaveLength(12 * 3 * 4);
+    expect(synchronized.facts).toHaveLength(12 * 3 * 4 + 1);
     expect(coordinateKeys.size).toBe(12 * 3 * 4);
     expect(synchronized.facts.find((fact) => fact.coordinates === keptFact.coordinates)).toBe(keptFact);
     expect(synchronized.facts.some((fact) => fact.coordinates.product.includes("bookcase"))).toBe(false);

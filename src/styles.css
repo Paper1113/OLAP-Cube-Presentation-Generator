@@ -337,3 +337,10 @@ fieldset { min-width: 0; border: 1px solid #d7e2e8; border-radius: .5rem; }
   .cube-appearance__heading { align-items: stretch; flex-direction: column; }
   .cube-style-grid { grid-template-columns: 1fr; }
 }
+
+/* User-supplied prose must wrap inside previews, including unbroken names. */
+.preview-card__header p, .preview-description, .slide-preview__subtitle,
+.slide-preview__notes, .validation-panel, .export-status { overflow-wrap: anywhere; }
+.storage-status { color: #496576; font-size: .8rem; margin: 0 0 1rem; }
+.fact-cell-control input[aria-invalid="true"] { border-color: #ad3030; }
+.fact-table small { color: #ad3030; display: block; max-width: 240px; }

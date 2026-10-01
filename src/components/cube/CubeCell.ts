@@ -1,6 +1,7 @@
 import type { CubeCellView } from "../../models/cube";
 import type { CubeCellGeometry, CubeGeometryOptions } from "../../engine/cubeGeometry";
 import type { ResolvedCubeTheme } from "../../theme/cubeAppearance";
+import { fittedSvgText } from "./CubeLabels";
 
 const escapeXml = (value: string): string => value
   .replaceAll("&", "&amp;")
@@ -67,9 +68,14 @@ export const cubeCellValueMarkup = (
   options: CubeGeometryOptions,
   theme: ResolvedCubeTheme,
 ): string => {
-  const label = cubeCellValueLabel(cell);
+  const fontSize = cubeCellValueFontSize(geometry, options);
+  const label = fittedSvgText(cubeCellValueLabel(cell), options.cellWidth - 10, {
+    fontFamily: theme.fontFamily,
+    fontSize,
+    fontWeight: theme.valueFontWeight,
+  });
   const strokeWidth = cubeCellValueStrokeWidth(options);
   const position = cubeCellValuePosition(geometry, options);
   const frontFill = cell.hasData ? theme.frontFill : theme.emptyFrontFill;
-  return `<text data-cube-value="true" data-depth-index="${geometry.zIndex}" x="${position.x}" y="${position.y}" text-anchor="middle" font-family="${escapeXml(theme.fontFamily)}" font-size="${cubeCellValueFontSize(geometry, options)}" font-weight="${theme.valueFontWeight}" fill="${cell.hasData ? theme.valueFill : theme.emptyValueFill}" stroke="${frontFill}" stroke-width="${strokeWidth}" paint-order="stroke fill" stroke-linejoin="round">${escapeXml(label)}</text>`;
+  return `<text data-cube-value="true" data-depth-index="${geometry.zIndex}" x="${position.x}" y="${position.y}" text-anchor="middle" font-family="${escapeXml(theme.fontFamily)}" font-size="${fontSize}" font-weight="${theme.valueFontWeight}" fill="${cell.hasData ? theme.valueFill : theme.emptyValueFill}" stroke="${frontFill}" stroke-width="${strokeWidth}" paint-order="stroke fill" stroke-linejoin="round">${label}</text>`;
 };

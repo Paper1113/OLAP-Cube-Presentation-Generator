@@ -9,6 +9,8 @@ export interface Measure {
 export interface FactRecord {
   coordinates: Record<string, string>;
   measures: Record<string, number>;
+  /** Unfinished editor text; its measure is absent until valid. Persisted losslessly. */
+  measureInputs?: Record<string, string>;
 }
 
 export interface CubeDataset {

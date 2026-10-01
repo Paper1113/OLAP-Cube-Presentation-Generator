@@ -298,6 +298,7 @@ export const refreshSalesFacts = (
     facts: dataset.facts.map((fact) => ({
       ...fact,
       coordinates: fact.coordinates,
+      measureInputs: Object.fromEntries(Object.entries(fact.measureInputs ?? {}).filter(([id]) => id !== "sales")),
       measures: {
         ...fact.measures,
         sales: generateSalesValue({

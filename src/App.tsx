@@ -8,7 +8,7 @@ import { PresentationPreview } from "./components/presentation/PresentationPrevi
 import { createCubeView } from "./engine/cubeEngine";
 import { validateDataset } from "./engine/validation";
 import { downloadPng } from "./export/pngExport";
-import { exportPresentation } from "./export/pptxExport";
+import { buildPresentationSlides, presentationErrors } from "./export/presentationModel";
 import { downloadSvg } from "./export/svgExport";
 import {
   generateIndustryWorkspace,
@@ -79,8 +79,9 @@ export default function App() {
   const [mode, setMode] = useState<AppMode>("editor");
   const [exportStatus, setExportStatus] = useState("");
 
+  const [saved, setSaved] = useState(true);
   useEffect(() => {
-    saveWorkspace(workspace);
+    setSaved(saveWorkspace(workspace));
   }, [workspace]);
 
   const operation = useMemo(() => operationConfigFor(workspace), [workspace]);
@@ -125,12 +126,17 @@ export default function App() {
   };
 
   const handlePptxExport = async () => {
-    if (validationErrors.length > 0) {
-      setExportStatus("Fix dataset validation errors before creating a PowerPoint file.");
+    // Build all five operation slides only for an explicit presentation export.
+    // Editing the current cube should not materialize five additional views on
+    // every keystroke; the same complete check still gates the export itself.
+    const slideErrors = presentationErrors(buildPresentationSlides(workspace));
+    if (slideErrors.length > 0) {
+      setExportStatus(`PowerPoint blocked: ${slideErrors.join("\n")}`);
       return;
     }
     setExportStatus("Creating the six-slide PowerPoint presentation…");
     try {
+      const { exportPresentation } = await import("./export/pptxExport");
       await exportPresentation({
         dataset: workspace.dataset,
         axisMapping: workspace.axisMapping,
@@ -181,11 +187,13 @@ export default function App() {
   };
 
   const synchronizeFacts = () => {
-    setWorkspace((current) => ({
-      ...current,
-      dataset: synchronizeLeafFacts(current.dataset),
-    }));
-    setExportStatus("Leaf-level fact combinations were rebuilt from the current hierarchies.");
+    try {
+      const dataset = synchronizeLeafFacts(workspace.dataset);
+      setWorkspace({ ...workspace, dataset });
+      setExportStatus("Leaf facts rebuilt. Existing Sales and duplicate rows were preserved; only new coordinates received synthetic Sales. Removed coordinates were dropped. Review any operation errors above.");
+    } catch (error) {
+      setExportStatus(`Facts were preserved. ${error instanceof Error ? error.message : "Complete the hierarchy before rebuilding."}`);
+    }
   };
 
   const loadDemo = () => {
@@ -212,6 +220,7 @@ export default function App() {
         </div>
       </header>
 
+      <p role="status" className={saved ? "storage-status" : "validation-panel"}>{saved ? "Saved locally" : "Not saved: browser storage is blocked or full. Keep this tab open; your changes may be lost on reload."}</p>
       {mode === "editor" ? (
         <main className="editor-layout">
           <aside className="editor-sidebar" aria-label="Dataset and operation controls">
@@ -274,7 +283,7 @@ export default function App() {
             <div className="preview-actions">
               <button type="button" className="secondary-button" onClick={handleSvgExport} disabled={!cubeResult.view}>Export SVG</button>
               <button type="button" className="secondary-button" onClick={() => void handlePngExport()} disabled={!cubeResult.view}>Export PNG</button>
-              <button type="button" className="primary-button" onClick={() => void handlePptxExport()} disabled={validationErrors.length > 0}>Export PowerPoint</button>
+              <button type="button" className="primary-button" onClick={() => void handlePptxExport()} disabled={validationErrors.length > 0 || cubeResult.errors.length > 0}>Export PowerPoint</button>
               <button type="button" className="secondary-button" onClick={() => setMode("presentation")}>Open presentation preview</button>
             </div>
             <p className="export-status" role="status">{exportStatus}</p>

@@ -41,20 +41,17 @@ export const defaultCubeGeometryOptions: CubeGeometryOptions = {
   fontFamily: "Aptos, Arial, sans-serif",
 };
 
-const maxMemberLabelLength = 16;
 const memberLabelFontSize = 12;
 const axisTitleFontSize = 14;
 const axisTitleFontWeight = 700;
 const axisTitleRightPadding = 24;
+export const cubeZMemberLabelMaxWidth = 140;
 
 export interface CubeTextMeasureOptions {
   fontFamily: string;
   fontSize: number;
   fontWeight?: number;
 }
-
-const shortenMemberLabel = (label: string): string =>
-  label.length > maxMemberLabelLength ? `${label.slice(0, maxMemberLabelLength - 1)}…` : label;
 
 const fallbackTextWidth = (text: string, fontSize: number): number =>
   Array.from(text).length * fontSize;
@@ -80,6 +77,30 @@ export const measureCubeTextWidth = (
   }
 };
 
+/** Pixel-based ellipsis shared by all SVG text; full text remains in a title tooltip. */
+export const fitCubeText = (text: string, maxWidth: number, options: CubeTextMeasureOptions): string => {
+  if (measureCubeTextWidth(text, options) <= maxWidth) return text;
+  const characters = Array.from(text);
+  let low = 0;
+  let high = characters.length;
+  let best = 0;
+
+  // Find the longest fitting prefix in O(log n) measurements instead of
+  // measuring every one-character-shorter candidate.
+  while (low <= high) {
+    const length = Math.floor((low + high) / 2);
+    const candidate = `${characters.slice(0, length).join("")}…`;
+    if (measureCubeTextWidth(candidate, options) <= maxWidth) {
+      best = length;
+      low = length + 1;
+    } else {
+      high = length - 1;
+    }
+  }
+
+  return `${characters.slice(0, best).join("")}…`;
+};
+
 export const getCubeZAxisTitleX = (
   view: Pick<CubeViewModel, "z">,
   originX: number,
@@ -87,17 +108,20 @@ export const getCubeZAxisTitleX = (
 ): number => {
   const zCount = Math.max(1, view.z.members.length);
   const zEndX = originX + zCount * options.depthX + 13;
-  const lastZMemberIndex = Math.max(0, view.z.members.length - 1);
-  const finalZLabelX = originX + lastZMemberIndex * options.depthX + 3;
-  const finalZLabel = shortenMemberLabel(view.z.members[lastZMemberIndex]?.label ?? "");
-  const finalZLabelWidth = measureCubeTextWidth(finalZLabel, {
+  const zLabelOptions = {
     fontFamily: options.fontFamily,
     fontSize: memberLabelFontSize,
-  });
+  } as const;
+  const maxZLabelRight = view.z.members.reduce((rightEdge, member, index) => {
+    const fittedLabel = fitCubeText(member.label, cubeZMemberLabelMaxWidth, zLabelOptions);
+    const labelRight = originX + index * options.depthX + 3
+      + measureCubeTextWidth(fittedLabel, zLabelOptions);
+    return Math.max(rightEdge, labelRight);
+  }, originX);
 
   return Math.max(
     zEndX + 8,
-    finalZLabelX + finalZLabelWidth + 12,
+    maxZLabelRight + 12,
   );
 };
 
@@ -131,11 +155,11 @@ export const createCubeGeometry = (
 
   const zAxisTitle = `${view.z.dimensionName} · ${view.z.levelName} ↗`;
   const zAxisTitleX = getCubeZAxisTitleX(view, originX, options);
-  const zAxisTitleWidth = measureCubeTextWidth(zAxisTitle, {
+  const zAxisTitleWidth = Math.min(320, measureCubeTextWidth(zAxisTitle, {
     fontFamily: options.fontFamily,
     fontSize: axisTitleFontSize,
     fontWeight: axisTitleFontWeight,
-  });
+  }));
   const width = Math.max(
     520,
     originX + view.x.members.length * xStep + view.z.members.length * options.depthX + 90,
