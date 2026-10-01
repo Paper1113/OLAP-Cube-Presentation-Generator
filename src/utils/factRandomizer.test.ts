@@ -29,7 +29,7 @@ describe("fact entry helpers", () => {
 
   it("chooses lowest-level members and avoids the current selection when possible", () => {
     const members = lowestLevelMembers(product);
-    expect(members).toHaveLength(4);
+    expect(members).toHaveLength(6);
     expect(randomMemberId(product, undefined, () => 0)).toBe(members[0].id);
     expect(randomMemberId(product, undefined, () => 0.999)).toBe(members.at(-1)?.id);
     expect(randomMemberId(product, members[0].id, () => 0)).toBe(members[1].id);

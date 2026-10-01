@@ -45,9 +45,9 @@ describe("industry templates", () => {
 
     industryTemplates.forEach((template) => {
       expect(template.name.trim()).not.toBe("");
-      expect(template.productCategories.flatMap((category) => category.products)).toHaveLength(4);
+      template.productCategories.forEach((category) => expect(category.products.length).toBeGreaterThanOrEqual(2));
       expect(template.countries).toHaveLength(2);
-      expect(template.countries.flatMap((country) => country.cities)).toHaveLength(3);
+      template.countries.forEach((country) => expect(country.cities.length).toBeGreaterThanOrEqual(1));
     });
   });
 
@@ -58,12 +58,15 @@ describe("industry templates", () => {
       "Sofa",
       "Armchair",
       "Bed Frame",
+      "Bedside Table",
       "Bookcase",
+      "Wardrobe",
     ]);
     expect(template.countries.flatMap((country) => country.cities.map((city) => city.label))).toEqual([
       "Sydney",
       "Perth",
       "Los Angeles",
+      "Seattle",
     ]);
   });
 
@@ -77,8 +80,8 @@ describe("industry templates", () => {
     const products = levelMembers(dataset, "product", "product-item");
     const cities = levelMembers(dataset, "location", "location-city");
 
-    expect(products.map((member) => member.label)).toEqual(["Sofa", "Armchair", "Bed Frame", "Bookcase"]);
-    expect(cities.map((member) => member.label)).toEqual(["Sydney", "Perth", "Los Angeles"]);
+    expect(products.map((member) => member.label)).toEqual(["Sofa", "Armchair", "Bed Frame", "Bedside Table", "Bookcase", "Wardrobe"]);
+    expect(cities.map((member) => member.label)).toEqual(["Sydney", "Perth", "Los Angeles", "Seattle"]);
     expect(dataset.facts).toHaveLength(12 * products.length * cities.length);
     expect(dataset.facts.every((fact) => products.some((member) => member.id === fact.coordinates.product))).toBe(true);
     expect(dataset.facts.every((fact) => cities.some((member) => member.id === fact.coordinates.location))).toBe(true);
@@ -110,9 +113,9 @@ describe("industry workspace generator", () => {
       expect(years[0].label).toBe("2032");
       expect(timeQuarters).toHaveLength(4);
       expect(timeMonths).toHaveLength(12);
-      expect(products).toHaveLength(4);
-      expect(cities).toHaveLength(3);
-      expect(dataset.facts).toHaveLength(144);
+      expect(products.length).toBeGreaterThanOrEqual(categories.length * 2);
+      expect(cities.length).toBeGreaterThanOrEqual(countries.length);
+      expect(dataset.facts).toHaveLength(12 * products.length * cities.length);
       expect(workspace.generation).toEqual({
         industryId,
         selectedIndustryId: industryId,
@@ -144,7 +147,7 @@ describe("industry workspace generator", () => {
         fact.coordinates.product,
         fact.coordinates.location,
       ].join("\u0000")));
-      expect(coordinateKeys.size).toBe(144);
+      expect(coordinateKeys.size).toBe(dataset.facts.length);
       dataset.facts.forEach((fact) => {
         expect(monthIds.has(fact.coordinates.time)).toBe(true);
         expect(productIds.has(fact.coordinates.product)).toBe(true);
@@ -175,19 +178,25 @@ describe("industry workspace generator", () => {
       });
 
       const transitions = [
-        ["time", "time-month", "x"],
-        ["product", "product-item", "y"],
-        ["location", "location-city", "z"],
+        ["time", "time-quarter", "time-month", "x"],
+        ["time", "time-year", "time-quarter", "x"],
+        ["time", "time-year", "time-month", "x"],
+        ["product", "product-category", "product-item", "y"],
+        ["location", "location-country", "location-city", "z"],
       ] as const;
 
-      transitions.forEach(([dimensionId, targetLevelId, axis]) => {
+      transitions.forEach(([dimensionId, sourceLevelId, targetLevelId, axis]) => {
         const result = createCubeView(workspace.dataset, {
           axisMapping: workspace.axisMapping,
-          activeLevels: workspace.activeLevels,
+          activeLevels: { ...workspace.activeLevels, [dimensionId]: sourceLevelId },
           operation: { type: "drilldown", dimensionId, targetLevelId },
         });
         expect(result.errors).toEqual([]);
         expect(result.view?.[axis].levelId).toBe(targetLevelId);
+        expect(result.view?.cells.every((cell) => cell.hasData)).toBe(true);
+        expect(result.view?.cells.reduce((sum, cell) => sum + cell.value, 0)).toBe(
+          workspace.dataset.facts.reduce((sum, fact) => sum + fact.measures.sales, 0),
+        );
       });
     },
   );
@@ -319,7 +328,7 @@ describe("industry workspace generator", () => {
     const refreshed = refreshSalesFacts(workspace.dataset, template, () => 0.9);
 
     expect(refreshed.title).toBe("Fashion analysis");
-    expect(refreshed.facts).toHaveLength(144);
+    expect(refreshed.facts).toHaveLength(workspace.dataset.facts.length);
     refreshed.facts.forEach((fact, index) => {
       expect(fact.coordinates).toBe(originalCoordinates[index]);
       expect(fact.measures.sales).not.toBe(originalSales[index]);
@@ -353,8 +362,8 @@ describe("industry workspace generator", () => {
       fact.coordinates.location,
     ].join("\u0000")));
 
-    expect(synchronized.facts).toHaveLength(12 * 3 * 3);
-    expect(coordinateKeys.size).toBe(12 * 3 * 3);
+    expect(synchronized.facts).toHaveLength(12 * 3 * 4);
+    expect(coordinateKeys.size).toBe(12 * 3 * 4);
     expect(synchronized.facts.find((fact) => fact.coordinates === keptFact.coordinates)).toBe(keptFact);
     expect(synchronized.facts.some((fact) => fact.coordinates.product.includes("bookcase"))).toBe(false);
   });
