@@ -84,8 +84,24 @@ export const measureCubeTextWidth = (
 export const fitCubeText = (text: string, maxWidth: number, options: CubeTextMeasureOptions): string => {
   if (measureCubeTextWidth(text, options) <= maxWidth) return text;
   const characters = Array.from(text);
-  while (characters.length && measureCubeTextWidth(`${characters.join("")}…`, options) > maxWidth) characters.pop();
-  return `${characters.join("")}…`;
+  let low = 0;
+  let high = characters.length;
+  let best = 0;
+
+  // Find the longest fitting prefix in O(log n) measurements instead of
+  // measuring every one-character-shorter candidate.
+  while (low <= high) {
+    const length = Math.floor((low + high) / 2);
+    const candidate = `${characters.slice(0, length).join("")}…`;
+    if (measureCubeTextWidth(candidate, options) <= maxWidth) {
+      best = length;
+      low = length + 1;
+    } else {
+      high = length - 1;
+    }
+  }
+
+  return `${characters.slice(0, best).join("")}…`;
 };
 
 export const getCubeZAxisTitleX = (

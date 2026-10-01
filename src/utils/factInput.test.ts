@@ -28,4 +28,10 @@ describe("fact measure input", () => {
     });
     expect(setFactMeasureInput(fact(), "sales", "1.25e2").measures.sales).toBe(125);
   });
+
+  it("preserves a trailing decimal separator while the value is still being typed", () => {
+    const updated = setFactMeasureInput(fact(), "sales", "1.");
+    expect(updated.measures).toEqual({});
+    expect(updated.measureInputs).toEqual({ sales: "1." });
+  });
 });

@@ -4,12 +4,25 @@ import {
   createCubeGeometry,
   getCubeZAxisTitleX,
   measureCubeTextWidth,
+  fitCubeText,
 } from "../../engine/cubeGeometry";
 import { generateIndustryWorkspace } from "../../generator/datasetGenerator";
 import { resolveCubeVisualTheme } from "../../theme/cubeAppearance";
 import { createCubeSvgMarkup } from "./CubeSvg";
 
 describe("cube SVG layout", () => {
+  it("fits long labels using a bounded prefix search", () => {
+    const text = "A very long dimension title that needs a clear boundary";
+    const options = { fontFamily: "Arial", fontSize: 14 } as const;
+    const fitted = fitCubeText(text, measureCubeTextWidth("A very long…", options), options);
+
+    expect(fitted.endsWith("…")).toBe(true);
+    expect(measureCubeTextWidth(fitted, options)).toBeLessThanOrEqual(
+      measureCubeTextWidth("A very long…", options),
+    );
+    expect(fitted.length).toBeLessThan(text.length);
+  });
+
   it("reserves vertical clearance between the SVG subtitle and a sliced Z-axis label", () => {
     const workspace = generateIndustryWorkspace({
       title: "Sample Sales Analysis",

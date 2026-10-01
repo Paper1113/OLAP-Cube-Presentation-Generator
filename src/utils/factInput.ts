@@ -1,5 +1,10 @@
 import type { FactRecord } from "../models/cube";
 
+const completeFiniteDecimalPattern = /^[+-]?(?:(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)$/;
+
+const isCompleteFiniteDecimal = (raw: string): boolean =>
+  completeFiniteDecimalPattern.test(raw.trim()) && Number.isFinite(Number(raw));
+
 export const factMeasureError = (fact: FactRecord, measureId: string): string | undefined => {
   const raw = fact.measureInputs?.[measureId];
   if (raw !== undefined) return raw.trim() === ""
@@ -11,7 +16,7 @@ export const factMeasureError = (fact: FactRecord, measureId: string): string | 
 export const setFactMeasureInput = (fact: FactRecord, measureId: string, raw: string): FactRecord => {
   const measures = { ...fact.measures };
   const measureInputs = { ...fact.measureInputs };
-  const valid = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(raw.trim()) && Number.isFinite(Number(raw));
+  const valid = isCompleteFiniteDecimal(raw);
   if (valid) { measures[measureId] = Number(raw); delete measureInputs[measureId]; }
   else { delete measures[measureId]; measureInputs[measureId] = raw; }
   return { ...fact, measures, measureInputs };
