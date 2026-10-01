@@ -2,6 +2,7 @@ import type { CubeDataset, FactRecord } from "../models/cube";
 import { validateDataset } from "../engine/validation";
 import { getMember, orderedLevels } from "../engine/hierarchy";
 import { randomSalesValue } from "../utils/factRandomizer";
+import { isCompleteFiniteDecimal } from "../utils/factInput";
 
 const coordinateKey = (coordinates: Record<string, string>, dimensionIds: string[]): string =>
   dimensionIds.map((dimensionId) => coordinates[dimensionId] ?? "").join("\u0000");
@@ -44,8 +45,11 @@ export const synchronizeLeafFacts = (
 ): CubeDataset => {
   const errors = validateDataset({ ...dataset, facts: [] });
   if (errors.length) throw new Error(errors.join("\n"));
-  const incompleteMeasures = dataset.facts.some((fact) => Object.keys(fact.measureInputs ?? {}).length > 0
-    || dataset.measures.some((measure) => !Number.isFinite(fact.measures[measure.id])));
+  const incompleteMeasures = dataset.facts.some((fact) => dataset.measures.some((measure) => {
+    const raw = fact.measureInputs?.[measure.id];
+    return !Number.isFinite(fact.measures[measure.id])
+      || (raw !== undefined && !isCompleteFiniteDecimal(raw));
+  }));
   if (incompleteMeasures) {
     throw new Error("Sales contains unfinished or invalid input. Complete every Sales value before rebuilding facts.");
   }

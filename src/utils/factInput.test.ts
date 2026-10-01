@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { setFactMeasureInput } from "./factInput";
+import { commitFactMeasureInput, factMeasureError, setFactMeasureInput } from "./factInput";
 import type { FactRecord } from "../models/cube";
 
 const fact = (): FactRecord => ({
@@ -33,5 +33,23 @@ describe("fact measure input", () => {
     const updated = setFactMeasureInput(fact(), "sales", "1.");
     expect(updated.measures).toEqual({});
     expect(updated.measureInputs).toEqual({ sales: "1." });
+  });
+
+  it("preserves valid non-canonical text until blur", () => {
+    const updated = setFactMeasureInput(fact(), "sales", "1.0");
+    expect(updated.measures).toEqual({ sales: 1 });
+    expect(updated.measureInputs).toEqual({ sales: "1.0" });
+    expect(factMeasureError(updated, "sales")).toBeUndefined();
+    expect(commitFactMeasureInput(updated, "sales")).toEqual({
+      ...fact(),
+      measureInputs: {},
+      measures: { sales: 1 },
+    });
+  });
+
+  it("preserves exponent notation while it is being edited", () => {
+    const updated = setFactMeasureInput(fact(), "sales", "1e2");
+    expect(updated.measures).toEqual({ sales: 100 });
+    expect(updated.measureInputs).toEqual({ sales: "1e2" });
   });
 });

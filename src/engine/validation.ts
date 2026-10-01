@@ -1,5 +1,6 @@
 import type { CubeDataset } from "../models/cube";
 import { getMember, getLevel } from "./hierarchy";
+import { isCompleteFiniteDecimal } from "../utils/factInput";
 
 export const validateDataset = (dataset: CubeDataset): string[] => {
   const errors: string[] = [];
@@ -45,7 +46,10 @@ export const validateDataset = (dataset: CubeDataset): string[] => {
     dataset.measures.forEach((measure) => {
       const value = fact.measures[measure.id];
       if (fact.measureInputs?.[measure.id] !== undefined) {
-        errors.push(`Fact row ${index + 1}: ${measure.name} is ${fact.measureInputs[measure.id].trim() === "" ? "blank (unfinished, not zero)" : "invalid"}. Enter a finite number.`);
+        const raw = fact.measureInputs[measure.id];
+        if (raw.trim() === "" || !isCompleteFiniteDecimal(raw) || typeof value !== "number" || !Number.isFinite(value)) {
+          errors.push(`Fact row ${index + 1}: ${measure.name} is ${raw.trim() === "" ? "blank (unfinished, not zero)" : "invalid"}. Enter a finite number.`);
+        }
       } else if (typeof value !== "number" || !Number.isFinite(value)) {
         errors.push(`Fact row ${index + 1} has a non-numeric ${measure.name} value.`);
       }

@@ -1,4 +1,4 @@
-import { setFactMeasureInput, factMeasureError } from "../../utils/factInput";
+import { setFactMeasureInput, commitFactMeasureInput, factMeasureError } from "../../utils/factInput";
 import type { CubeDataset, FactRecord } from "../../models/cube";
 import { getMember, orderedLevels } from "../../engine/hierarchy";
 import { RANDOM_SALES_MAX, RANDOM_SALES_MIN, randomSalesValue } from "../../utils/factRandomizer";
@@ -68,6 +68,9 @@ export const FactGrid = ({ dataset, onDatasetChange, onRefreshAllSales }: FactGr
                       aria-describedby={`sales-error-${rowIndex}`}
                       value={measure ? fact.measureInputs?.[measure.id] ?? fact.measures[measure.id] ?? "" : ""}
                       onChange={(event) => updateFact(rowIndex, (current) => setSales(current, event.target.value))}
+                      onBlur={() => {
+                        if (measure) updateFact(rowIndex, (current) => commitFactMeasureInput(current, measure.id));
+                      }}
                       disabled={!measure}
                     />
                     <button
