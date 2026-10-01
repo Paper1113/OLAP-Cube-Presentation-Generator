@@ -6,7 +6,7 @@ import type {
   Measure,
 } from "../models/cube";
 import type { AxisMapping, OperationConfig } from "../models/operation";
-import { addToAggregate } from "./aggregation";
+import { addToAggregate, finalizeAggregates } from "./aggregation";
 import { describeOperation } from "./description";
 import { validateDataset } from "./validation";
 import {
@@ -207,25 +207,27 @@ export const createCubeView = (dataset: CubeDataset, request: CubeRequest): Cube
   y.members = y.members.filter((member) => selections[y.dimensionId].includes(member.id));
   z.members = z.members.filter((member) => selections[z.dimensionId].includes(member.id));
 
-  const aggregates = new Map<string, number>();
+  const aggregateValues = new Map<string, number[]>();
+  let aggregates: Map<string, number>;
   try {
-  dataset.facts.forEach((fact) => {
-    const mapped: Record<string, string> = {};
-    const dimensions = [x, y, z];
-    for (const axis of dimensions) {
-      const dimension = getDimension(dataset, axis.dimensionId);
-      const coordinate = fact.coordinates[axis.dimensionId];
-      const member = dimension && coordinate
-        ? memberAtLevel(dimension, coordinate, axis.levelId)
-        : undefined;
-      if (!member || !selections[axis.dimensionId].includes(member.id)) return;
-      mapped[axis.dimensionId] = member.id;
-    }
-    const value = fact.measures[measure.id];
-    if (typeof value === "number" && Number.isFinite(value)) {
-      addToAggregate(aggregates, cellKey(mapped[x.dimensionId], mapped[y.dimensionId], mapped[z.dimensionId]), value);
-    }
-  });
+    dataset.facts.forEach((fact) => {
+      const mapped: Record<string, string> = {};
+      const dimensions = [x, y, z];
+      for (const axis of dimensions) {
+        const dimension = getDimension(dataset, axis.dimensionId);
+        const coordinate = fact.coordinates[axis.dimensionId];
+        const member = dimension && coordinate
+          ? memberAtLevel(dimension, coordinate, axis.levelId)
+          : undefined;
+        if (!member || !selections[axis.dimensionId].includes(member.id)) return;
+        mapped[axis.dimensionId] = member.id;
+      }
+      const value = fact.measures[measure.id];
+      if (typeof value === "number" && Number.isFinite(value)) {
+        addToAggregate(aggregateValues, cellKey(mapped[x.dimensionId], mapped[y.dimensionId], mapped[z.dimensionId]), value);
+      }
+    });
+    aggregates = finalizeAggregates(aggregateValues);
 
   } catch (error) {
     return { view: null, errors: [error instanceof Error ? error.message : "SUM failed."] };

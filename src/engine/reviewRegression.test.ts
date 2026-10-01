@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { generateIndustryWorkspace } from '../generator/datasetGenerator';
 import { synchronizeLeafFacts } from '../generator/factSynchronizer';
 import { createCubeView } from './cubeEngine';
+import { sumValues } from './aggregation';
 import { validateDataset } from './validation';
 import { exportPresentation } from '../export/pptxExport';
 const sample = () => generateIndustryWorkspace({title: 'Review', industryId: 'furniture-home', random: () => .3});
@@ -20,6 +21,21 @@ it('blocks SUM overflow rather than creating non-finite cells', () => {
   const w = sample(); w.dataset.facts.forEach(f => f.measures.sales = 1e308);
   const result = createCubeView(w.dataset, {...w, operation: {type: 'original'}});
   expect(result.view).toBeNull(); expect(result.errors.join(' ')).toMatch(/SUM.*overflow/i);
+});
+it('allows cancellation before deciding whether a SUM overflows', () => {
+  expect(sumValues([1e308, 1e308, -1e308])).toBe(1e308);
+  expect(() => sumValues([1e308, 1e308])).toThrow(/SUM.*overflow/i);
+
+  const w = sample();
+  const template = structuredClone(w.dataset.facts[0]);
+  w.dataset.facts = [
+    { ...template, measures: { sales: 1e308 } },
+    { ...template, measures: { sales: 1e308 } },
+    { ...template, measures: { sales: -1e308 } },
+  ];
+  const result = createCubeView(w.dataset, { ...w, operation: { type: 'original' } });
+  expect(result.errors).toEqual([]);
+  expect(result.view?.cells.find((cell) => cell.hasData)?.value).toBe(1e308);
 });
 it('rejects removed active level instead of choosing another level', () => {
   const w = sample(); w.activeLevels.time = 'deleted';
