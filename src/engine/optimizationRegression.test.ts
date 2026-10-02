@@ -1,3 +1,4 @@
+import { RollupPanel, availableRollupTransition } from "../components/operations/RollupPanel";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DrilldownPanel } from "../components/operations/DrilldownPanel";
@@ -38,6 +39,14 @@ describe('precision and presentation preflight',()=>{
   w.activeLevels.time='time-month';
   expect(render()).toContain('This dimension is already at its lowest');
   expect(render()).not.toContain('Original cube level is unavailable');
+ });
+ it('does not offer a fallback Roll-up transition for a removed visible level',()=>{
+  const w=workspace();w.activeLevels.time='removed';
+  expect(availableRollupTransition(w.dataset,w.dataset.dimensions[0],w.activeLevels)).toBeUndefined();
+  const html=renderToStaticMarkup(createElement(RollupPanel,{dataset:w.dataset,activeLevels:w.activeLevels,rollup:w.operations.rollup,onChange:()=>{}}));
+  expect(html).toContain('Original cube level is unavailable');
+  expect(html).toContain('Select Original cube level again');
+  expect(html).not.toContain('>Month</output>');
  });
  it('final validation still detects aggregate overflow excluded from preflight',()=>{
   const w=workspace();w.dataset.facts.forEach(f=>f.measures.sales=Number.MAX_VALUE);
