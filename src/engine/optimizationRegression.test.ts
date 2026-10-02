@@ -2,7 +2,8 @@ import { RollupPanel, availableRollupTransition } from "../components/operations
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DrilldownPanel } from "../components/operations/DrilldownPanel";
-import {describe, it, expect} from 'vitest';
+import {describe, it, expect, vi} from 'vitest';
+import App from '../App';
 import {formatCubeCellValue} from '../components/cube/CubeCell';
 import {generateIndustryWorkspace} from '../generator/datasetGenerator';
 import {validatePresentation, buildPresentationSlides, presentationErrors} from '../export/presentationModel';
@@ -51,6 +52,16 @@ describe('precision and presentation preflight',()=>{
  it('final validation still detects aggregate overflow excluded from preflight',()=>{
   const w=workspace();w.dataset.facts.forEach(f=>f.measures.sales=Number.MAX_VALUE);
   expect(validatePresentation(w)).toEqual([]);expect(presentationErrors(buildPresentationSlides(w)).length).toBeGreaterThan(0);
+ });
+ it('disables PowerPoint for a known current SUM overflow despite valid preflight',()=>{
+  const w=workspace();w.dataset.facts.forEach(f=>f.measures.sales=Number.MAX_VALUE);
+  expect(validatePresentation(w)).toEqual([]);
+  vi.stubGlobal('window',{localStorage:{getItem:()=>JSON.stringify(w)}});
+  try {
+    const html=renderToStaticMarkup(createElement(App));
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Export PowerPoint<\/button>/);
+    expect(html).toContain('SUM');
+  } finally { vi.unstubAllGlobals(); }
  });
  it('retains complete values and coordinates in SVG without numeric ellipsis',()=>{
   const w=workspace();w.dataset.facts.forEach(f=>f.measures.sales=.004);

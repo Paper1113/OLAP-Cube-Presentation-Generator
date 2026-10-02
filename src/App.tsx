@@ -141,6 +141,10 @@ export default function App() {
 
   const handlePptxExport = async () => {
     if (pptxBusy) return;
+    if (cubeResult.errors.length > 0) {
+      setExportStatus(`PowerPoint blocked: ${cubeResult.errors.join(" ")}`);
+      return;
+    }
     // The exporter performs complete, fresh engine/SUM validation once.
     if (presentationIssues.length > 0) {
       setExportStatus(`PowerPoint blocked: ${presentationIssues.map(issue => `${issue.title}: ${issue.errors.join(" ")}`).join("\n")}`);
@@ -305,7 +309,7 @@ export default function App() {
             <div className="preview-actions">
               <button type="button" className="secondary-button" onClick={handleSvgExport} disabled={!cubeResult.view}>Export SVG</button>
               <button type="button" className="secondary-button" onClick={() => void handlePngExport()} disabled={!cubeResult.view}>Export PNG</button>
-              <button type="button" className="primary-button" onClick={() => void handlePptxExport()} disabled={pptxBusy || presentationIssues.length > 0}>{pptxBusy ? "Creating PowerPoint…" : "Export PowerPoint"}</button>
+              <button type="button" className="primary-button" onClick={() => void handlePptxExport()} disabled={pptxBusy || presentationIssues.length > 0 || cubeResult.errors.length > 0}>{pptxBusy ? "Creating PowerPoint…" : "Export PowerPoint"}</button>
               <button type="button" className="secondary-button" onClick={() => setMode("presentation")}>Open presentation preview</button>
             </div>
             <p className="export-status" role="status">{exportStatus}</p>
