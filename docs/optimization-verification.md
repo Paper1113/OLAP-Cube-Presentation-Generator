@@ -32,7 +32,7 @@ Reproduce: `npx vitest run --config scripts/benchmark.config.ts`. This synthetic
 
 ## Automated checks
 
-127 tests passed (105 existing + 22 precision/preflight/title regressions). Production build passed. `git diff --check` passed. Existing occlusion, collision, SVG bounds, removed-level rejection, duplicate facts, mixed-grain rejection and finite SUM checks continue to pass. New checks cover tiny positive/negative values, zero, scientific transitions, rounding across boundaries, full SVG values, invalid offscreen Dice/Drill-down, preserved rebuild selections and final SUM overflow rejection.
+128 tests passed (105 existing + 23 precision/preflight/title regressions). A review regression verifies that a deleted Drill-down source is diagnosed as an unavailable Original level, separately from a valid lowest level. Production build passed. `git diff --check` passed. Existing occlusion, collision, SVG bounds, removed-level rejection, duplicate facts, mixed-grain rejection and finite SUM checks continue to pass. New checks cover tiny positive/negative values, zero, scientific transitions, rounding across boundaries, full SVG values, invalid offscreen Dice/Drill-down, preserved rebuild selections and final SUM overflow rejection.
 
 ## Browser checks
 

@@ -77,9 +77,11 @@ export const DrilldownPanel = ({ dataset, activeLevels, drilldown, onChange }: D
                 const source = currentLevel(dimension, activeLevels);
                 const targets = lowerLevels(dimension, source?.id);
                 const available = hasAvailableTarget(dataset, activeLevels, dimension);
-                const unavailableReason = targets.length === 0
-                  ? " (already at lowest level)"
-                  : " (no lower-level fact data)";
+                const unavailableReason = !source
+                  ? " (select Original cube level)"
+                  : targets.length === 0
+                    ? " (already at lowest level)"
+                    : " (no lower-level fact data)";
                 return (
                   <option key={dimension.id} value={dimension.id} disabled={!available}>
                     {dimension.name}{available ? "" : unavailableReason}
@@ -90,7 +92,7 @@ export const DrilldownPanel = ({ dataset, activeLevels, drilldown, onChange }: D
           </label>
           <label className="operation-field">
             Current level
-            <output className="operation-field__value">{sourceLevel?.name ?? "No active level"}</output>
+            <output className="operation-field__value">{sourceLevel?.name ?? "Select Original cube level again"}</output>
           </label>
           <label className="operation-field">
             Drill-down to
@@ -109,7 +111,9 @@ export const DrilldownPanel = ({ dataset, activeLevels, drilldown, onChange }: D
               })}
             </select>
           </label>
-          {targets.length === 0 ? (
+          {!sourceLevel ? (
+            <p className="inline-errors" role="status">The Original cube level is unavailable. Select an existing level in Advanced Settings before configuring Drill-down.</p>
+          ) : targets.length === 0 ? (
             <p className="inline-errors" role="status">This dimension is already at its lowest hierarchy level.</p>
           ) : availableTargets.length === 0 ? (
             <p className="inline-errors" role="status">No lower-level data is available for this Drill-down operation.</p>

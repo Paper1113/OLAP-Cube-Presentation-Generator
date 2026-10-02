@@ -1,3 +1,6 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { DrilldownPanel } from "../components/operations/DrilldownPanel";
 import {describe, it, expect} from 'vitest';
 import {formatCubeCellValue} from '../components/cube/CubeCell';
 import {generateIndustryWorkspace} from '../generator/datasetGenerator';
@@ -25,6 +28,16 @@ describe('precision and presentation preflight',()=>{
   const w=workspace();w.operations.slice.memberId='removed';const settings=JSON.stringify(w.operations);
   const facts=w.dataset.facts;const rebuilt=synchronizeLeafFacts(w.dataset);
   expect(rebuilt.facts).toEqual(facts);expect(w.operations.slice.memberId).toBe('removed');expect(settings).toBe(JSON.stringify(w.operations));
+ });
+ it('distinguishes a missing Drill-down source from a valid lowest level',()=>{
+  const w=workspace();w.activeLevels.time='removed';
+  const render=()=>renderToStaticMarkup(createElement(DrilldownPanel,{dataset:w.dataset,activeLevels:w.activeLevels,drilldown:w.operations.drilldown,onChange:()=>{}}));
+  expect(render()).toContain('Original cube level is unavailable');
+  expect(render()).toContain('select Original cube level');
+  expect(render()).not.toContain('This dimension is already at its lowest');
+  w.activeLevels.time='time-month';
+  expect(render()).toContain('This dimension is already at its lowest');
+  expect(render()).not.toContain('Original cube level is unavailable');
  });
  it('final validation still detects aggregate overflow excluded from preflight',()=>{
   const w=workspace();w.dataset.facts.forEach(f=>f.measures.sales=Number.MAX_VALUE);
