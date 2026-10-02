@@ -1,3 +1,4 @@
+import { layoutDatasetTitle } from "./titleLayout";
 import PptxGenJS from "pptxgenjs";
 import { createCubeSvgMarkup } from "../components/cube/CubeSvg";
 import { normalizeCubeAppearance, type CubeAppearance } from "../theme/cubeAppearance";
@@ -109,13 +110,12 @@ const addTitleSlide = (
     margin: 0,
   });
   slide.addNotes(slideModel.subtitle ?? "");
-  // Keep the title slide to one readable line; the complete title is retained
-  // in speaker notes and in the downloaded filename.
-  slide.addText(fitSlideText(slideModel.subtitle ?? "", 24), {
+  // Shared two-line layout; full title remains in notes.
+  slide.addText(layoutDatasetTitle(slideModel.subtitle ?? ""), {
     x: 0.98,
     y: 3.14,
     w: 10.9,
-    h: 0.42,
+    h: 0.85,
     fontFace: "Arial Unicode MS",
     fontSize: 16,
     color: "496576",

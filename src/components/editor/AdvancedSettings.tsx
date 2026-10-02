@@ -1,3 +1,4 @@
+import { orderedLevels } from "../../engine/hierarchy";
 import type { CubeDataset } from "../../models/cube";
 import type { AxisMapping } from "../../models/operation";
 import { AxisMappingEditor } from "./AxisMappingEditor";
@@ -45,6 +46,7 @@ export const AdvancedSettings = ({
         onDatasetChange={onDatasetChange}
         onActiveLevelsChange={onActiveLevelsChange}
       />
+      {dataset.dimensions.reduce((count, dimension) => count * (orderedLevels(dimension).at(-1)?.members.length ?? 0), 1) >= 1000 && <p role="status">Large leaf Cartesian product: {dataset.dimensions.reduce((count, dimension) => count * (orderedLevels(dimension).at(-1)?.members.length ?? 0), 1).toLocaleString()} combinations. Rebuild preserves every combination; reduce members before rebuilding, or use Roll-up / Dice for smaller views.</p>}
       <section className="advanced-settings__sync" aria-labelledby="sync-facts-heading">
         <div>
           <h3 id="sync-facts-heading">Apply hierarchy changes</h3>

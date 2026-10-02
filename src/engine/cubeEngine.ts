@@ -165,7 +165,7 @@ const selectionsFor = (
   return { selections, errors };
 };
 
-export const createCubeView = (dataset: CubeDataset, request: CubeRequest): CubeBuildResult => {
+const prepareCubeRequest = (dataset: CubeDataset, request: CubeRequest) => {
   const errors = [...validateDataset(dataset), ...validAxisMapping(dataset, request.axisMapping)];
   const measure: Measure | undefined = dataset.measures[0];
 
@@ -204,6 +204,17 @@ export const createCubeView = (dataset: CubeDataset, request: CubeRequest): Cube
   y.members = y.members.filter((member) => selections[y.dimensionId].includes(member.id));
   z.members = z.members.filter((member) => selections[z.dimensionId].includes(member.id));
 
+  return {view: null, errors, measure, levels, sourceLevels, selections, x, y, z};
+};
+
+/** Shared preflight: validates facts, coordinates and selections without SUM or cells. */
+export const validateCubeRequest = (dataset: CubeDataset, request: CubeRequest): string[] =>
+  prepareCubeRequest(dataset, request).errors;
+
+export const createCubeView = (dataset: CubeDataset, request: CubeRequest): CubeBuildResult => {
+  const prepared = prepareCubeRequest(dataset, request);
+  const {errors, measure, sourceLevels, selections, x, y, z} = prepared;
+  if (errors.length || !measure || !x || !y || !z || !selections || !sourceLevels) return {view:null, errors};
   const aggregateValues = new Map<string, number[]>();
   let aggregates: Map<string, number>;
   try {

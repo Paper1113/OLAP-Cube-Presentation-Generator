@@ -1,7 +1,6 @@
 import type { CubeViewModel } from "../../models/cube";
 import {
   createCubeGeometry,
-  fitCubeText,
   measureCubeTextWidth,
   type CubeCellGeometry,
   type CubeGeometryOptions,
@@ -13,8 +12,7 @@ import {
 import { cubeAxesMarkup } from "./CubeAxis";
 import {
   cubeCellMarkup,
-  cubeCellValueFontSize,
-  cubeCellValueLabel,
+  cubeCellFittedValue,
   cubeCellValueMarkup,
   cubeCellValuePosition,
   cubeCellValueStrokeWidth,
@@ -50,13 +48,8 @@ const valueLabelBounds = (
   options: CubeGeometryOptions,
   theme: ReturnType<typeof resolveCubeVisualTheme>,
 ): ValueLabelBounds => {
-  const fontSize = cubeCellValueFontSize(valueCell.geometry, options);
+  const {label, fontSize} = cubeCellFittedValue(valueCell.cell, valueCell.geometry, options, theme);
   const position = cubeCellValuePosition(valueCell.geometry, options);
-  const label = fitCubeText(cubeCellValueLabel(valueCell.cell), options.cellWidth - 10, {
-    fontFamily: options.fontFamily,
-    fontSize,
-    fontWeight: theme.valueFontWeight,
-  });
   const width = measureCubeTextWidth(label, {
     fontFamily: options.fontFamily,
     fontSize,
@@ -131,16 +124,6 @@ const polygonsOverlap = (left: CubePoint[], right: CubePoint[]): boolean => {
   });
 };
 
-const labelOverlapsLaterFace = (
-  bounds: ValueLabelBounds,
-  laterCells: OrderedValueCell[],
-  options: CubeGeometryOptions,
-): boolean => {
-  const labelPolygon = rectanglePoints(bounds);
-  return laterCells.some((laterCell) => facePolygons(laterCell, options)
-    .some((face) => polygonsOverlap(labelPolygon, face)));
-};
-
 /**
  * Keep value labels in the same painter order as the cube faces. A label that
  * would be covered by a later cell face is omitted first; remaining labels
@@ -154,9 +137,23 @@ const visibleValueCells = (
 ): OrderedValueCell[] => {
   const visible: Array<OrderedValueCell & { bounds: ValueLabelBounds }> = [];
 
+  // Index face envelopes once; exact SAT still decides occlusion in painter order.
+  const bucketSize = Math.max(options.cellWidth, options.cellHeight);
+  const buckets = new Map<string, number[]>();
+  const envelopes = orderedValueCells.map(({geometry: g}) => ({left:g.frontX, right:g.frontX + options.cellWidth + options.depthX, top:g.frontY-options.depthY, bottom:g.frontY+options.cellHeight}));
+  const keys = (b: ValueLabelBounds) => {
+    const result: string[] = [];
+    for(let x=Math.floor(b.left/bucketSize);x<=Math.floor(b.right/bucketSize);x++)
+      for(let y=Math.floor(b.top/bucketSize);y<=Math.floor(b.bottom/bucketSize);y++)result.push(`${x}:${y}`);
+    return result;
+  };
+  envelopes.forEach((b,i) => keys(b).forEach(key => { const bucket=buckets.get(key) ?? []; bucket.push(i); buckets.set(key,bucket); }));
   orderedValueCells.forEach((valueCell, valueIndex) => {
     const bounds = valueLabelBounds(valueCell, options, theme);
-    if (labelOverlapsLaterFace(bounds, orderedValueCells.slice(valueIndex + 1), options)) return;
+    const candidates = new Set(keys(bounds).flatMap(key => buckets.get(key) ?? []));
+    const polygon = rectanglePoints(bounds);
+    if ([...candidates].some(i => i > valueIndex && boundsOverlap(bounds, envelopes[i])
+      && facePolygons(orderedValueCells[i], options).some(face => polygonsOverlap(polygon, face)))) return;
 
     const collisions = visible.filter((candidate) => boundsOverlap(candidate.bounds, bounds));
     if (collisions.length > 0) {

@@ -28,6 +28,7 @@ const activeLevelName = (
   const selectedLevel = activeLevels[dimension.id]
     ? getLevel(dimension, activeLevels[dimension.id])
     : undefined;
+  if (activeLevels[dimension.id] && !selectedLevel) return "請重新選擇層級 / Select a level again";
   return selectedLevel?.name ?? orderedLevels(dimension).at(-1)?.name ?? "No level";
 };
 

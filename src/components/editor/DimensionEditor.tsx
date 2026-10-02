@@ -38,9 +38,10 @@ export const DimensionEditor = ({
             <label>
               Original cube level
               <select
-                value={activeLevels[dimension.id] ?? levels.at(-1)?.id ?? ""}
+                value={levels.some(level => level.id === (activeLevels[dimension.id] ?? levels.at(-1)?.id)) ? activeLevels[dimension.id] ?? levels.at(-1)?.id : ""}
                 onChange={(event) => onActiveLevelsChange({ ...activeLevels, [dimension.id]: event.target.value })}
               >
+                <option value="" disabled>請重新選擇層級 / Select a level again</option>
                 {levels.map((level) => <option key={level.id} value={level.id}>{level.name}</option>)}
               </select>
             </label>

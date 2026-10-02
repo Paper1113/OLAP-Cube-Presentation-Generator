@@ -1,3 +1,4 @@
+import { CubeDataTable } from "./components/cube/CubeDataTable";
 import { useEffect, useMemo, useState } from "react";
 import { CubeRenderer } from "./components/cube/CubeRenderer";
 import { AdvancedSettings } from "./components/editor/AdvancedSettings";
@@ -8,7 +9,7 @@ import { PresentationPreview } from "./components/presentation/PresentationPrevi
 import { createCubeView } from "./engine/cubeEngine";
 import { validateDataset } from "./engine/validation";
 import { downloadPng } from "./export/pngExport";
-import { buildPresentationSlides, presentationErrors } from "./export/presentationModel";
+import { validatePresentation } from "./export/presentationModel";
 import { downloadSvg } from "./export/svgExport";
 import {
   generateIndustryWorkspace,
@@ -79,20 +80,33 @@ export default function App() {
   const [mode, setMode] = useState<AppMode>("editor");
   const [exportStatus, setExportStatus] = useState("");
 
+  const [pptxBusy, setPptxBusy] = useState(false);
   const [saved, setSaved] = useState(true);
   useEffect(() => {
     setSaved(saveWorkspace(workspace));
   }, [workspace]);
 
-  const operation = useMemo(() => operationConfigFor(workspace), [workspace]);
+  const operation = useMemo(() => operationConfigFor(workspace), [workspace.operations]);
   const cubeResult = useMemo(
     () => createCubeView(workspace.dataset, {
       axisMapping: workspace.axisMapping,
       activeLevels: workspace.activeLevels,
       operation,
     }),
-    [workspace, operation],
+    [workspace.dataset, workspace.axisMapping, workspace.activeLevels, operation],
   );
+  const presentationIssues = useMemo(() => validatePresentation(workspace),
+    [workspace.dataset, workspace.axisMapping, workspace.activeLevels, workspace.operations]);
+  const goToRepair = (kind: OperationConfig["type"]) => {
+    setMode("editor");
+    setWorkspace(current => ({...current, operations:{...current.operations, activeOperation:kind}}));
+    requestAnimationFrame(() => {
+      if (kind === "original") {
+        document.querySelectorAll<HTMLDetailsElement>(".advanced-settings, .dimension-editor").forEach(el => el.open = true);
+        document.getElementById("dimensions-heading")?.scrollIntoView({block:"center"});
+      } else document.getElementById(`operation-tab-${kind}`)?.focus();
+    });
+  };
   const validationErrors = useMemo(() => validateDataset(workspace.dataset), [workspace.dataset]);
   const visibleErrors = uniqueErrors([...validationErrors, ...cubeResult.errors]);
   const filenameBase = safeFilename(`${workspace.dataset.title}-${operation.type}`);
@@ -126,14 +140,17 @@ export default function App() {
   };
 
   const handlePptxExport = async () => {
-    // Build all five operation slides only for an explicit presentation export.
-    // Editing the current cube should not materialize five additional views on
-    // every keystroke; the same complete check still gates the export itself.
-    const slideErrors = presentationErrors(buildPresentationSlides(workspace));
-    if (slideErrors.length > 0) {
-      setExportStatus(`PowerPoint blocked: ${slideErrors.join("\n")}`);
+    if (pptxBusy) return;
+    if (cubeResult.errors.length > 0) {
+      setExportStatus(`PowerPoint blocked: ${cubeResult.errors.join(" ")}`);
       return;
     }
+    // The exporter performs complete, fresh engine/SUM validation once.
+    if (presentationIssues.length > 0) {
+      setExportStatus(`PowerPoint blocked: ${presentationIssues.map(issue => `${issue.title}: ${issue.errors.join(" ")}`).join("\n")}`);
+      return;
+    }
+    setPptxBusy(true);
     setExportStatus("Creating the six-slide PowerPoint presentation…");
     try {
       const { exportPresentation } = await import("./export/pptxExport");
@@ -148,7 +165,7 @@ export default function App() {
       setExportStatus("PowerPoint download started.");
     } catch (error) {
       setExportStatus(error instanceof Error ? error.message : "PowerPoint export failed.");
-    }
+    } finally { setPptxBusy(false); }
   };
 
   const updateDatasetTitle = (title: string) => {
@@ -190,7 +207,7 @@ export default function App() {
     try {
       const dataset = synchronizeLeafFacts(workspace.dataset);
       setWorkspace({ ...workspace, dataset });
-      setExportStatus("Leaf facts rebuilt. Existing Sales and duplicate rows were preserved; only new coordinates received synthetic Sales. Removed coordinates were dropped. Review any operation errors above.");
+      setExportStatus(`Facts successfully rebuilt. ${validatePresentation({...workspace, dataset}).length} affected operations still need repair. Original cube levels and operation selections were preserved. Leaf facts rebuilt. Existing Sales and duplicate rows were preserved; only new coordinates received synthetic Sales. Removed coordinates were dropped. Review the repair links above.`);
     } catch (error) {
       setExportStatus(`Facts were preserved. ${error instanceof Error ? error.message : "Complete the hierarchy before rebuilding."}`);
     }
@@ -265,6 +282,11 @@ export default function App() {
                 <ul>{visibleErrors.map((error, index) => <li key={`${index}-${error}`}>{error}</li>)}</ul>
               </section>
             )}
+            {presentationIssues.length > 0 && <section className="validation-panel" aria-live="polite">
+              <h3>{presentationIssues.length} operations need repair before PowerPoint export</h3>
+              {presentationIssues.map(issue => <div key={issue.kind}><button type="button" onClick={() => goToRepair(issue.kind)}>Repair {issue.title}</button><p>{issue.errors.join(" ")}</p></div>)}
+              <button type="button" onClick={() => goToRepair("original")}>Review Original cube levels</button>
+            </section>}
             <section className="preview-card">
               <div className="preview-card__header">
                 <div>
@@ -278,12 +300,16 @@ export default function App() {
               ) : (
                 <div className="empty-preview"><p>Correct the data or operation settings to render the cube.</p></div>
               )}
+              {cubeResult.view && <>
+                {cubeResult.view.cells.length >= 1000 && <p role="status">{cubeResult.view.cells.length.toLocaleString()} cells. Use Roll-up or Dice to reduce rendering cost.</p>}
+                <CubeDataTable view={cubeResult.view} />
+              </>}
               {cubeResult.view && <p className="preview-description">{cubeResult.view.description}</p>}
             </section>
             <div className="preview-actions">
               <button type="button" className="secondary-button" onClick={handleSvgExport} disabled={!cubeResult.view}>Export SVG</button>
               <button type="button" className="secondary-button" onClick={() => void handlePngExport()} disabled={!cubeResult.view}>Export PNG</button>
-              <button type="button" className="primary-button" onClick={() => void handlePptxExport()} disabled={validationErrors.length > 0 || cubeResult.errors.length > 0}>Export PowerPoint</button>
+              <button type="button" className="primary-button" onClick={() => void handlePptxExport()} disabled={pptxBusy || presentationIssues.length > 0 || cubeResult.errors.length > 0}>{pptxBusy ? "Creating PowerPoint…" : "Export PowerPoint"}</button>
               <button type="button" className="secondary-button" onClick={() => setMode("presentation")}>Open presentation preview</button>
             </div>
             <p className="export-status" role="status">{exportStatus}</p>

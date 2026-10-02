@@ -17,7 +17,7 @@ const currentLevel = (
   const requestedId = activeLevels[dimension.id];
   if (requestedId) {
     const requestedLevel = getLevel(dimension, requestedId);
-    if (requestedLevel) return requestedLevel;
+    return requestedLevel;
   }
   return orderedLevels(dimension).at(-1);
 };
@@ -109,7 +109,7 @@ export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupP
           </label>
           <label className="operation-field">
             Current level
-            <output className="operation-field__value">{sourceLevel?.name ?? "No active level"}</output>
+            <output className="operation-field__value">{sourceLevel?.name ?? "Select Original cube level again"}</output>
           </label>
           <label className="operation-field">
             Roll-up to
@@ -126,7 +126,9 @@ export const RollupPanel = ({ dataset, activeLevels, rollup, onChange }: RollupP
               {targets.map((level) => <option key={level.id} value={level.id}>{level.name}</option>)}
             </select>
           </label>
-          {targets.length === 0 ? (
+          {!sourceLevel ? (
+            <p className="inline-errors" role="status">The Original cube level is unavailable. Select an existing level in Advanced Settings before configuring Roll-up.</p>
+          ) : targets.length === 0 ? (
             <p className="inline-errors" role="status">No higher-level transition with complete source data is available.</p>
           ) : !targetIsAvailable ? (
             <p className="inline-errors" role="status">Choose a higher hierarchy level for the Roll-up.</p>
