@@ -22,9 +22,9 @@ describe('precision and presentation preflight',()=>{
   expect(validatePresentation(w)).toHaveLength(5);expect(JSON.stringify(w)).toBe(before);
  });
  it('rebuild retains values and stale operation IDs for explicit repair',()=>{
-  const w=workspace();const settings=JSON.stringify(w.operations);w.operations.slice.memberId='removed';
+  const w=workspace();w.operations.slice.memberId='removed';const settings=JSON.stringify(w.operations);
   const facts=w.dataset.facts;const rebuilt=synchronizeLeafFacts(w.dataset);
-  expect(rebuilt.facts).toEqual(facts);expect(w.operations.slice.memberId).toBe('removed');expect(settings).not.toBe(JSON.stringify(w.operations));
+  expect(rebuilt.facts).toEqual(facts);expect(w.operations.slice.memberId).toBe('removed');expect(settings).toBe(JSON.stringify(w.operations));
  });
  it('final validation still detects aggregate overflow excluded from preflight',()=>{
   const w=workspace();w.dataset.facts.forEach(f=>f.measures.sales=Number.MAX_VALUE);
