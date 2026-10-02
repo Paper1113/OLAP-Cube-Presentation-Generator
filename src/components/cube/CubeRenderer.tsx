@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { CubeViewModel } from "../../models/cube";
 import type { CubeAppearance } from "../../theme/cubeAppearance";
 import { createCubeSvgMarkup } from "./CubeSvg";
@@ -16,16 +17,17 @@ export const CubeRenderer = ({
   svgId,
   className = "",
   compact = false,
-}: CubeRendererProps) => (
+}: CubeRendererProps) => {
+  const markup = useMemo(() => createCubeSvgMarkup(view, {
+    id: svgId, appearance, includeTitle: !compact,
+    geometry: compact ? { cellWidth: 76, cellHeight: 52, fontSize: 11 } : undefined,
+  }), [view, appearance, svgId, compact]);
+  return (
   <div
     className={`cube-renderer ${compact ? "cube-renderer--compact" : ""} ${className}`}
     dangerouslySetInnerHTML={{
-      __html: createCubeSvgMarkup(view, {
-        id: svgId,
-        appearance,
-        includeTitle: !compact,
-        geometry: compact ? { cellWidth: 76, cellHeight: 52, fontSize: 11 } : undefined,
-      }),
+      __html: markup,
     }}
   />
 );
+};

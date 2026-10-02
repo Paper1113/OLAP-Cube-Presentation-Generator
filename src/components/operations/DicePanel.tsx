@@ -14,7 +14,7 @@ const currentLevelId = (
   activeLevels: Record<string, string>,
 ): string | undefined => {
   const requestedId = activeLevels[dimension.id];
-  if (requestedId && getLevel(dimension, requestedId)) return requestedId;
+  if (requestedId) return getLevel(dimension, requestedId)?.id;
   return orderedLevels(dimension).at(-1)?.id;
 };
 
@@ -93,6 +93,7 @@ export const DicePanel = ({ dataset, activeLevels, dice, onChange }: DicePanelPr
                     Clear
                   </button>
                 </div>
+                {(dice.selections[dimension.id] ?? []).some(id => !availableMemberIds.has(id)) && <p className="inline-errors" role="status">Selection includes removed or unavailable members. Explicitly select the intended members again.</p>}
                 {members.length > 0 && selectedMemberIds.length === 0 && (
                   <p className="inline-errors" role="status">Select at least one {dimension.name} member.</p>
                 )}

@@ -18,7 +18,7 @@ const currentLevel = (
   const requestedId = activeLevels[dimension.id];
   if (requestedId) {
     const requestedLevel = getLevel(dimension, requestedId);
-    if (requestedLevel) return requestedLevel;
+    return requestedLevel;
   }
   return orderedLevels(dimension).at(-1);
 };

@@ -56,6 +56,8 @@ export interface CubeTextMeasureOptions {
 const fallbackTextWidth = (text: string, fontSize: number): number =>
   Array.from(text).length * fontSize;
 
+let textContext: CanvasRenderingContext2D | null | undefined;
+
 /** Measure the same font used by the SVG, with a conservative non-DOM fallback for tests. */
 export const measureCubeTextWidth = (
   text: string,
@@ -65,8 +67,7 @@ export const measureCubeTextWidth = (
   if (typeof document === "undefined") return fallback;
 
   try {
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
+    const context = textContext ??= document.createElement("canvas").getContext("2d");
     if (!context) return fallback;
 
     context.font = `${fontWeight} ${fontSize}px ${fontFamily}`;

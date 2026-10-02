@@ -1,3 +1,4 @@
+import { layoutDatasetTitle } from "../../export/titleLayout";
 import { CubeRenderer } from "../cube/CubeRenderer";
 import type { PresentationSlideModel } from "../../export/presentationModel";
 import type { CubeAppearance } from "../../theme/cubeAppearance";
@@ -18,9 +19,9 @@ export const SlidePreview = ({ slide, totalSlides, appearance }: SlidePreviewPro
     return (
       <article className="slide-preview slide-preview--title" aria-label={`Slide ${slide.number} of ${totalSlides}: ${slide.title}`}>
         <p className="slide-preview__number">Slide {slide.number} / {totalSlides}</p>
-        <div className="slide-preview__title-content">
+        <div className="slide-preview__title-content" style={{width:"100%", maxWidth:1100}}>
           <h2>{slide.title}</h2>
-          {slide.subtitle && <p className="slide-preview__subtitle">{slide.subtitle}</p>}
+          {slide.subtitle && <svg className="slide-preview__subtitle" role="img" aria-label={slide.subtitle} viewBox="0 0 785 64" style={{width:"100%", maxWidth:1100, height:"auto", color:"#b9d7e4"}}><title>{slide.subtitle}</title>{layoutDatasetTitle(slide.subtitle).split("\n").map((line,index) => <text key={index} x="392.5" y={22 + index * 24} textAnchor="middle" fontFamily="Arial Unicode MS" fontSize="16" fill="currentColor">{line}</text>)}</svg>}
           {slide.details.map((detail) => <p className="slide-preview__credit" key={detail}>{detail}</p>)}
         </div>
       </article>

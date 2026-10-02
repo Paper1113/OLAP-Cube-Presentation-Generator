@@ -1,4 +1,4 @@
-import { createCubeView } from "../engine/cubeEngine";
+import { createCubeView, validateCubeRequest } from "../engine/cubeEngine";
 import { rollupSourceLevel } from "../engine/hierarchy";
 import type { CubeDataset, CubeViewModel } from "../models/cube";
 import type { AxisMapping, OperationConfig, OperationSettings, OperationType } from "../models/operation";
@@ -145,3 +145,8 @@ export const buildPresentationSlides = (input: PresentationInput): PresentationS
 export const presentationErrors = (slides: PresentationSlideModel[]): string[] => slides
   .filter(slide => slide.kind !== "title" && (!slide.view || slide.errors.length))
   .map(slide => `${slide.title}: ${slide.errors.join(" ")} Fix this operation's selections or hierarchy settings; check Original cube levels and axis mapping in Advanced Settings.`);
+
+export const validatePresentation = (input: PresentationInput) => configuredOperations(input.operations)
+  .map(operation => ({kind:operation.type, title:operationTitles[operation.type],
+    errors:validateCubeRequest(input.dataset, {axisMapping:input.axisMapping, activeLevels:input.activeLevels, operation})}))
+  .filter(result => result.errors.length > 0);
