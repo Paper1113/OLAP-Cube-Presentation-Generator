@@ -66,7 +66,7 @@ Advanced Settings is collapsed by default so first-time users are not required t
 
 ## Local development
 
-Requires **Node.js 20+** (the CI workflows use Node 22).
+Requires **Node.js 20.19+, 22.12+, or 24+** (Node 21/23 are unsupported by the Vitest toolchain; the CI workflows use Node 22).
 
 ```bash
 npm install
