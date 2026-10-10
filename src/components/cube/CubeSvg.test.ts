@@ -402,6 +402,29 @@ describe("cube SVG layout", () => {
     expect(svg).toContain(`viewBox="${geometry.viewBox}"`);
   });
 
+  it("scopes accessibility and marker IDs when an SVG id is provided", () => {
+    const workspace = generateIndustryWorkspace({
+      title: "Scoped ids",
+      industryId: "furniture-home",
+      year: 2032,
+      random: () => 0.5,
+    });
+    const result = createCubeView(workspace.dataset, {
+      axisMapping: workspace.axisMapping,
+      activeLevels: workspace.activeLevels,
+      operation: { type: "original" },
+    });
+    const svg = createCubeSvgMarkup(result.view!, { id: "main-cube-svg" });
+
+    expect(svg).toContain('id="main-cube-svg"');
+    expect(svg).toContain('aria-labelledby="main-cube-svg-cube-title main-cube-svg-cube-description"');
+    expect(svg).toContain('id="main-cube-svg-cube-title"');
+    expect(svg).toContain('id="main-cube-svg-axis-arrow"');
+    expect(svg).toContain('marker-end="url(#main-cube-svg-axis-arrow)"');
+    expect(svg).not.toContain('id="cube-title"');
+    expect(svg).not.toContain('url(#axis-arrow)"');
+  });
+
   it("applies the selected palette and drawing style to SVG output", () => {
     const workspace = generateIndustryWorkspace({
       title: "Styled sample",
