@@ -12,6 +12,7 @@ export const cubeAxesMarkup = (
   view: { x: CubeAxisView; y: CubeAxisView; z: CubeAxisView },
   geometry: CubeGeometry,
   theme: ResolvedCubeTheme,
+  markerId = "axis-arrow",
 ): string => {
   const { options, originX, originY } = geometry;
   const xStep = options.cellWidth + options.spacing;
@@ -73,7 +74,7 @@ export const cubeAxesMarkup = (
     })(),
   ).join("");
 
-  return `<g class="cube-axes" fill="none" stroke="${theme.axisStroke}" stroke-width="${theme.axisStrokeWidth}" marker-end="url(#axis-arrow)"${axisDash}${lineCap}${lineJoin}>
+  return `<g class="cube-axes" fill="none" stroke="${theme.axisStroke}" stroke-width="${theme.axisStrokeWidth}" marker-end="url(#${markerId})"${axisDash}${lineCap}${lineJoin}>
     <line x1="${originX}" y1="${xBottom}" x2="${xEnd}" y2="${xBottom}" />
     <line x1="${originX - 20}" y1="${yStart}" x2="${originX - 20}" y2="${originY - 12}" />
     <line x1="${originX}" y1="${originY}" x2="${zEndX}" y2="${zEndY}" />

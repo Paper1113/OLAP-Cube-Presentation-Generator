@@ -66,6 +66,8 @@ Advanced Settings is collapsed by default so first-time users are not required t
 
 ## Local development
 
+Requires **Node.js 20+** (the CI workflows use Node 22).
+
 ```bash
 npm install
 npm run dev

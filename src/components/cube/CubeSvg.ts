@@ -203,15 +203,19 @@ export const createCubeSvgMarkup = (view: CubeViewModel, options: CubeSvgOptions
     .join("");
   const title = `${view.operationLabel}: ${view.datasetTitle}`;
   const fontFamily = escapeSvgText(theme.fontFamily);
+  const idPrefix = options.id ? `${escapeSvgText(options.id)}-` : "";
+  const titleId = `${idPrefix}cube-title`;
+  const descriptionId = `${idPrefix}cube-description`;
+  const markerId = `${idPrefix}axis-arrow`;
 
-  return `<svg${options.id ? ` id="${escapeSvgText(options.id)}"` : ""} xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="cube-title cube-description" viewBox="${geometry.viewBox}" width="${geometry.width}" height="${geometry.height}">
-    <title id="cube-title">${escapeSvgText(title)}</title>
-    <desc id="cube-description">${escapeSvgText(view.description)}</desc>
+  return `<svg${options.id ? ` id="${escapeSvgText(options.id)}"` : ""} xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="${titleId} ${descriptionId}" viewBox="${geometry.viewBox}" width="${geometry.width}" height="${geometry.height}">
+    <title id="${titleId}">${escapeSvgText(title)}</title>
+    <desc id="${descriptionId}">${escapeSvgText(view.description)}</desc>
     <rect width="100%" height="100%" fill="${theme.background}" />
-    <defs><marker id="axis-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="${theme.markerFill}" /></marker></defs>
+    <defs><marker id="${markerId}" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="${theme.markerFill}" /></marker></defs>
     ${includeTitle ? `<text x="24" y="34" font-family="${fontFamily}" font-size="19" font-weight="700" fill="${theme.titleFill}">${fittedSvgText(view.operationLabel, geometry.width - 48, { fontFamily: theme.fontFamily, fontSize: 19, fontWeight: 700 })}</text><text x="24" y="56" font-family="${fontFamily}" font-size="12" fill="${theme.subtitleFill}">${fittedSvgText(`${view.datasetTitle} · ${view.measure.name} (SUM)`, geometry.width - 48, { fontFamily: theme.fontFamily, fontSize: 12 })}</text>` : ""}
     ${cellsMarkup}
     <g class="cube-values">${valueMarkup}</g>
-    ${cubeAxesMarkup(view, geometry, theme)}
+    ${cubeAxesMarkup(view, geometry, theme, markerId)}
   </svg>`;
 };
