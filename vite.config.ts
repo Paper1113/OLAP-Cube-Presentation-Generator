@@ -9,7 +9,24 @@ export default defineConfig({
   base: configuredBase ?? (process.env.GITHUB_ACTIONS === "true" ? githubPagesBase : "/"),
   plugins: [react()],
   test: {
-    environment: "node",
-    include: ["src/**/*.test.ts"]
-  }
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "unit",
+          environment: "node",
+          include: ["src/**/*.test.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "ui",
+          environment: "jsdom",
+          include: ["src/**/*.test.tsx"],
+          setupFiles: ["./src/test/setup.ts"],
+        },
+      },
+    ],
+  },
 });

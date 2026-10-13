@@ -1,4 +1,4 @@
-import { createCubeView, validateCubeRequest } from "../engine/cubeEngine";
+import { createCubeView, validateCubeAggregation } from "../engine/cubeEngine";
 import { rollupSourceLevel } from "../engine/hierarchy";
 import type { CubeDataset, CubeViewModel } from "../models/cube";
 import type { AxisMapping, OperationConfig, OperationSettings, OperationType } from "../models/operation";
@@ -54,10 +54,11 @@ const currentLevelName = (
   activeLevels: Record<string, string>,
   dimensionId: string,
 ): string => {
-  const dimension = getDimension(dataset, dimensionId);
   const requested = activeLevels[dimensionId];
-  const fallback = [...(dimension?.levels ?? [])].sort((left, right) => left.order - right.order).at(-1)?.id;
-  return getLevelName(dataset, dimensionId, requested ?? fallback);
+  if (!requested || !getDimension(dataset, dimensionId)?.levels.some((level) => level.id === requested)) {
+    return "Unavailable level";
+  }
+  return getLevelName(dataset, dimensionId, requested);
 };
 
 const axisDetails = (view: CubeViewModel): string[] => [
@@ -90,7 +91,7 @@ const operationDetails = (
   const dimension = getDimension(input.dataset, operation.dimensionId);
   const dimensionName = dimension?.name ?? "Selected dimension";
   const fromLevel = operation.type === "rollup" && dimension
-    ? rollupSourceLevel(dimension, input.activeLevels[operation.dimensionId])?.name ?? "Current level"
+    ? rollupSourceLevel(dimension, input.activeLevels[operation.dimensionId])?.name ?? "Unavailable level"
     : currentLevelName(input.dataset, input.activeLevels, operation.dimensionId);
   const toLevel = getLevelName(input.dataset, operation.dimensionId, operation.targetLevelId);
   return [`${dimensionName}: ${fromLevel} → ${toLevel}`, `Measure: ${input.dataset.measures[0]?.name ?? "Measure"} (SUM)`];
@@ -146,7 +147,19 @@ export const presentationErrors = (slides: PresentationSlideModel[]): string[] =
   .filter(slide => slide.kind !== "title" && (!slide.view || slide.errors.length))
   .map(slide => `${slide.title}: ${slide.errors.join(" ")} Fix this operation's selections or hierarchy settings; check Original cube levels and axis mapping in Advanced Settings.`);
 
+/**
+ * Export gating for every operation slide: hierarchy/selection checks plus SUM
+ * overflow, without allocating Cartesian cube cells on each editor keystroke.
+ * Button gating must stay aligned with final `buildPresentationSlides` refusal.
+ */
 export const validatePresentation = (input: PresentationInput) => configuredOperations(input.operations)
-  .map(operation => ({kind:operation.type, title:operationTitles[operation.type],
-    errors:validateCubeRequest(input.dataset, {axisMapping:input.axisMapping, activeLevels:input.activeLevels, operation})}))
+  .map(operation => ({
+    kind: operation.type,
+    title: operationTitles[operation.type],
+    errors: validateCubeAggregation(input.dataset, {
+      axisMapping: input.axisMapping,
+      activeLevels: input.activeLevels,
+      operation,
+    }),
+  }))
   .filter(result => result.errors.length > 0);

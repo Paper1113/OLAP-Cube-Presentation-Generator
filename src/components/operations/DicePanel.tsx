@@ -1,6 +1,6 @@
 import type { CubeDataset } from "../../models/cube";
 import type { OperationSettings } from "../../models/operation";
-import { getLevel, membersAtLevel, orderedLevels } from "../../engine/hierarchy";
+import { getLevel, membersAtLevel } from "../../engine/hierarchy";
 
 export interface DicePanelProps {
   dataset: CubeDataset;
@@ -14,8 +14,8 @@ const currentLevelId = (
   activeLevels: Record<string, string>,
 ): string | undefined => {
   const requestedId = activeLevels[dimension.id];
-  if (requestedId) return getLevel(dimension, requestedId)?.id;
-  return orderedLevels(dimension).at(-1)?.id;
+  if (!requestedId) return undefined;
+  return getLevel(dimension, requestedId)?.id;
 };
 
 /** Configure one or more member selections per dimension for a Dice sub-cube. */
