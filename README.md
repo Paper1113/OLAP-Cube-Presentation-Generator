@@ -38,7 +38,7 @@ The available industry samples are:
 These controls are intentionally different:
 
 - **Generate Dataset** replaces the generated Time, Product, and Location hierarchies; recreates every leaf coordinate and Sales fact; and restores the default OLAP settings for the selected industry.
-- **Refresh Sales Data** changes only the synthetic `Sales` values. It keeps the dataset title, hierarchies, fact coordinate objects, axis mapping, active levels, and current operation settings.
+- **Refresh Sales Data** changes only the synthetic `Sales` values. It keeps the dataset title, hierarchies, fact coordinate objects, axis mapping, active levels, and current operation settings. Every fact coordinate must still match a current leaf member; after hierarchy edits, use **Apply Changes & Rebuild Facts** first, or Refresh refuses instead of inventing indexes.
 
 Changing the industry dropdown by itself never replaces the current dataset. Generate only when the chosen preset is ready to apply.
 
@@ -52,7 +52,7 @@ The core controls remain outside Advanced Settings:
 4. **Roll-up** — Aggregate the currently visible level to a higher fact-backed level. For example, Quarter to Year, Product to Category, or City to Country after selecting that source level in Advanced Settings.
 5. **Drill-down** — Expand Quarter to Month, Country to City, or Category to Product.
 
-The current diagram can be exported as SVG or high-resolution PNG, and the generated workspace can be rendered in the presentation preview or downloaded as a six-slide PowerPoint file.
+The current diagram can be exported as SVG or high-resolution PNG, and the generated workspace can be rendered in the presentation preview or downloaded as a six-slide PowerPoint file. Exports require finished Sales values: unfinished drafts such as `1.` keep the live preview usable but block SVG, PNG, and PowerPoint until editing is complete. PowerPoint also refuses the whole download when any operation slide fails validation, including SUM overflow.
 
 ## Advanced Settings
 
@@ -109,7 +109,7 @@ src/
   engine/           pure hierarchy, aggregation, OLAP, and geometry logic
   export/           SVG, PNG, and PptxGenJS helpers
   models/           cube, dimension, operation, and workspace types
-  utils/            IDs, random Sales helper, clipboard parser, LocalStorage
+  utils/            IDs, random Sales helper, fact input helpers, filenames, LocalStorage
 ```
 
 LocalStorage saves the current workspace, including industry generation metadata when available. Older saved workspaces without that optional metadata continue to load as custom datasets.
