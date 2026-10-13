@@ -49,13 +49,22 @@ describe('precision and presentation preflight',()=>{
   expect(html).toContain('Select Original cube level again');
   expect(html).not.toContain('>Month</output>');
  });
- it('final validation still detects aggregate overflow excluded from preflight',()=>{
+ it('presentation validation catches aggregate overflow that lightweight preflight skips',()=>{
   const w=workspace();w.dataset.facts.forEach(f=>f.measures.sales=Number.MAX_VALUE);
-  expect(validatePresentation(w)).toEqual([]);expect(presentationErrors(buildPresentationSlides(w)).length).toBeGreaterThan(0);
+  const originalReq={...w,operation:{type:'original'} as const};
+  expect(validateCubeRequest(w.dataset,originalReq)).toEqual([]);
+  expect(validatePresentation(w).length).toBeGreaterThan(0);
+  expect(presentationErrors(buildPresentationSlides(w)).length).toBeGreaterThan(0);
  });
- it('disables PowerPoint for a known current SUM overflow despite valid preflight',()=>{
+ it('presentation validation does not allocate Cartesian cells for overflow gating',()=>{
   const w=workspace();w.dataset.facts.forEach(f=>f.measures.sales=Number.MAX_VALUE);
-  expect(validatePresentation(w)).toEqual([]);
+  const issues=validatePresentation(w);
+  expect(issues.length).toBeGreaterThan(0);
+  expect(issues.every(issue=>issue.errors.some(error=>/SUM/i.test(error)))).toBe(true);
+ });
+ it('disables PowerPoint when any slide SUM overflows',()=>{
+  const w=workspace();w.dataset.facts.forEach(f=>f.measures.sales=Number.MAX_VALUE);
+  expect(validatePresentation(w).length).toBeGreaterThan(0);
   vi.stubGlobal('window',{localStorage:{getItem:()=>JSON.stringify(w)}});
   try {
     const html=renderToStaticMarkup(createElement(App));

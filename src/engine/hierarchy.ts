@@ -41,16 +41,13 @@ export const levelIndex = (dimension: Dimension, levelId: string): number =>
 export const levelName = (dimension: Dimension, levelId: string): string =>
   getLevel(dimension, levelId)?.name ?? "Unknown level";
 
-/** The source of a Roll-up is always the level currently shown by the cube. */
+/** The source of a Roll-up is the Original cube level; never invent a leaf fallback. */
 export const rollupSourceLevel = (
   dimension: Dimension,
   activeLevelId: string | undefined,
 ): DimensionLevel | undefined => {
-  const levels = orderedLevels(dimension);
-  const visibleLevel = activeLevelId
-    ? getLevel(dimension, activeLevelId) ?? levels.at(-1)
-    : levels.at(-1);
-  return visibleLevel;
+  if (!activeLevelId) return undefined;
+  return getLevel(dimension, activeLevelId);
 };
 
 export const hasFactDataAtLevel = (
