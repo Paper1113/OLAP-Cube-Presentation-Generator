@@ -80,4 +80,13 @@ describe("fact measure input", () => {
       expect(factMeasureError(updated, "sales")).toBe("Finish editing the Sales value.");
     },
   );
+
+  it.each(["1.e2", "1.e+2", "1.e-1"])(
+    "accepts completion of trailing-dot scientific values like %s",
+    (raw) => {
+      const updated = setFactMeasureInput(fact(), "sales", raw);
+      expect(updated.measures.sales).toBe(Number(raw));
+      expect(factMeasureError(updated, "sales")).toBeUndefined();
+    },
+  );
 });

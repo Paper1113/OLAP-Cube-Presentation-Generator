@@ -128,12 +128,11 @@ const createDimensions = (template: IndustryTemplate, year: number): Dimension[]
   ];
 };
 
+/** Strict deepest level only — never skip an empty leaf to a populated parent. */
 const leafMemberIds = (dataset: CubeDataset, dimensionId: string): string[] => {
   const dimension = dataset.dimensions.find((candidate) => candidate.id === dimensionId);
-  const level = dimension
-    ? [...orderedLevels(dimension)].reverse().find((candidate) => candidate.members.length > 0)
-    : undefined;
-  return level?.members.map((member) => member.id) ?? [];
+  const leafLevel = dimension ? orderedLevels(dimension).at(-1) : undefined;
+  return leafLevel?.members.map((member) => member.id) ?? [];
 };
 
 const memberIdsAtLevel = (dataset: CubeDataset, dimensionId: string, levelId: string): string[] =>

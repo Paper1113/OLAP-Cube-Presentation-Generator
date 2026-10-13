@@ -1,6 +1,7 @@
 import type { FactRecord } from "../models/cube";
 
-const completeFiniteDecimalPattern = /^[+-]?(?:(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)$/;
+// Trailing `.` before an exponent (`1.e2`) is complete; bare `1.` stays incomplete.
+const completeFiniteDecimalPattern = /^[+-]?(?:(?:\d+(?:\.\d*)?|\.\d+)[eE][+-]?\d+|(?:\d+(?:\.\d+)?|\.\d+))$/;
 
 /**
  * Incomplete numeric drafts while the user is still typing, including decimal

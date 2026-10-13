@@ -126,6 +126,14 @@ describe("audit regressions", () => {
     expect(() => refreshSalesFacts(w.dataset, template, () => 0.3)).toThrow(/leaf member/i);
   });
 
+  it("fails closed when Refresh Sales runs after an empty deepest hierarchy level is added", () => {
+    const w = workspace();
+    const template = getIndustryTemplate("furniture-home")!;
+    const product = w.dataset.dimensions.find((dimension) => dimension.id === "product")!;
+    product.levels.push({ id: "product-sku", name: "SKU", order: 9, members: [] });
+    expect(() => refreshSalesFacts(w.dataset, template, () => 0.3)).toThrow(/leaf member/i);
+  });
+
   it("preserves Unicode characters in export filenames", () => {
     expect(safeFilename("全球销售分析")).toBe("全球销售分析");
     expect(safeFilename("OLAP 年度銷售分析")).toBe("OLAP-年度銷售分析");
