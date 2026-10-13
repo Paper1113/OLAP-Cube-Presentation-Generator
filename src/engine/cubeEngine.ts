@@ -17,7 +17,6 @@ import {
   levelIndex,
   memberAtLevel,
   membersAtLevel,
-  orderedLevels,
   rollupSourceLevel,
 } from "./hierarchy";
 
@@ -64,8 +63,9 @@ const currentLevelFor = (
   const dimension = getDimension(dataset, dimensionId);
   if (!dimension) return undefined;
   const requested = activeLevels[dimensionId];
-  if (requested) return getLevel(dimension, requested)?.id;
-  return orderedLevels(dimension).at(-1)?.id;
+  // Missing, empty, and unknown IDs are all unavailable — never invent a leaf.
+  if (!requested) return undefined;
+  return getLevel(dimension, requested)?.id;
 };
 
 const asAxis = (dataset: CubeDataset, dimensionId: string, levelId: string): CubeAxisView | null => {
@@ -113,6 +113,9 @@ const resolveOperationLevels = (
     }
   } else if (targetIndex < 0 || targetIndex <= sourceIndex) {
     errors.push("Drill-down must move to a lower hierarchy level.");
+  } else if (!hasFactDataAtLevel(dataset, dimension.id, sourceLevel.id)) {
+    // Source must be representable — otherwise Drill-down can succeed when Original fails.
+    errors.push("No complete source-level data is available for this Drill-down operation.");
   } else if (!hasFactDataAtLevel(dataset, operation.dimensionId, operation.targetLevelId)) {
     errors.push("No lower-level data is available for this Drill-down operation.");
   } else {
@@ -283,5 +286,6 @@ export const canDrillDown = (
   if (!dimension || !sourceLevelId) return false;
   return levelIndex(dimension, sourceLevelId) >= 0
     && levelIndex(dimension, targetLevelId) > levelIndex(dimension, sourceLevelId)
+    && hasFactDataAtLevel(dataset, dimensionId, sourceLevelId)
     && hasFactDataAtLevel(dataset, dimensionId, targetLevelId);
 };

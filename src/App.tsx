@@ -24,6 +24,7 @@ import {
   normalizeCubeAppearance,
   type CubeAppearance,
 } from "./theme/cubeAppearance";
+import { safeFilename } from "./utils/filename";
 import { clearWorkspace, loadWorkspace, saveWorkspace } from "./utils/storage";
 import { uniqueErrors } from "./utils/errors";
 
@@ -44,9 +45,6 @@ const operationConfigFor = (workspace: WorkspaceState): OperationConfig => {
       return { type: "original" };
   }
 };
-
-const safeFilename = (value: string): string =>
-  (value.trim().toLowerCase().replaceAll(/[^a-z0-9]+/g, "-").replaceAll(/^-|-$/g, "") || "olap-cube");
 
 const hasUsableDataset = (candidate: WorkspaceState | null): candidate is WorkspaceState =>
   Boolean(
@@ -196,11 +194,15 @@ export default function App() {
       setExportStatus("Generate an industry dataset before refreshing its Sales values.");
       return;
     }
-    setWorkspace((current) => ({
-      ...current,
-      dataset: refreshSalesFacts(current.dataset, generatedTemplate),
-    }));
-    setExportStatus("Sales values were refreshed. Hierarchies, coordinates, and OLAP settings were preserved.");
+    try {
+      setWorkspace((current) => ({
+        ...current,
+        dataset: refreshSalesFacts(current.dataset, generatedTemplate),
+      }));
+      setExportStatus("Sales values were refreshed. Hierarchies, coordinates, and OLAP settings were preserved.");
+    } catch (error) {
+      setExportStatus(error instanceof Error ? error.message : "Sales refresh failed.");
+    }
   };
 
   const synchronizeFacts = () => {
@@ -265,6 +267,7 @@ export default function App() {
               dataset={workspace.dataset}
               axisMapping={workspace.axisMapping}
               activeLevels={workspace.activeLevels}
+              canRefreshSales={Boolean(generatedTemplate)}
               onDatasetChange={(dataset) => setWorkspace((current) => ({ ...current, dataset }))}
               onAxisMappingChange={(axisMapping) => setWorkspace((current) => ({ ...current, axisMapping }))}
               onActiveLevelsChange={(activeLevels) => setWorkspace((current) => ({ ...current, activeLevels }))}

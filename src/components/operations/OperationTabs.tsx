@@ -1,6 +1,6 @@
 import type { CubeDataset } from "../../models/cube";
 import type { OperationSettings, OperationType } from "../../models/operation";
-import { getLevel, orderedLevels } from "../../engine/hierarchy";
+import { getLevel } from "../../engine/hierarchy";
 import { DicePanel } from "./DicePanel";
 import { DrilldownPanel } from "./DrilldownPanel";
 import { RollupPanel } from "./RollupPanel";
@@ -25,11 +25,11 @@ const activeLevelName = (
   dimension: CubeDataset["dimensions"][number],
   activeLevels: Record<string, string>,
 ): string => {
-  const selectedLevel = activeLevels[dimension.id]
-    ? getLevel(dimension, activeLevels[dimension.id])
-    : undefined;
-  if (activeLevels[dimension.id] && !selectedLevel) return "請重新選擇層級 / Select a level again";
-  return selectedLevel?.name ?? orderedLevels(dimension).at(-1)?.name ?? "No level";
+  const requestedId = activeLevels[dimension.id];
+  if (!requestedId) return "請重新選擇層級 / Select a level again";
+  const selectedLevel = getLevel(dimension, requestedId);
+  if (!selectedLevel) return "請重新選擇層級 / Select a level again";
+  return selectedLevel.name;
 };
 
 /** Switch OLAP operations and expose the appropriate configuration controls. */

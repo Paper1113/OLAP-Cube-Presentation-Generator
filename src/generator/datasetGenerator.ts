@@ -293,6 +293,16 @@ export const refreshSalesFacts = (
   const productIndexes = indexByMemberId(dataset, "product");
   const cityIndexes = indexByMemberId(dataset, "location");
 
+  for (const fact of dataset.facts) {
+    if (!monthIndexes.has(fact.coordinates.time)
+      || !productIndexes.has(fact.coordinates.product)
+      || !cityIndexes.has(fact.coordinates.location)) {
+      throw new Error(
+        "Refresh Sales requires every fact coordinate to match a current leaf member. Rebuild facts after hierarchy changes, or regenerate the dataset.",
+      );
+    }
+  }
+
   return {
     ...dataset,
     facts: dataset.facts.map((fact) => ({
@@ -303,9 +313,9 @@ export const refreshSalesFacts = (
         ...fact.measures,
         sales: generateSalesValue({
           industry: template,
-          monthIndex: monthIndexes.get(fact.coordinates.time) ?? 0,
-          productIndex: productIndexes.get(fact.coordinates.product) ?? 0,
-          cityIndex: cityIndexes.get(fact.coordinates.location) ?? 0,
+          monthIndex: monthIndexes.get(fact.coordinates.time)!,
+          productIndex: productIndexes.get(fact.coordinates.product)!,
+          cityIndex: cityIndexes.get(fact.coordinates.location)!,
         }, random),
       },
     })),

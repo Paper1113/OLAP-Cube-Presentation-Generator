@@ -1,6 +1,6 @@
 import type { CubeDataset } from "../models/cube";
-import { getMember, getLevel } from "./hierarchy";
-import { isCompleteFiniteDecimal } from "../utils/factInput";
+import { getMember, getLevel, orderedLevels } from "./hierarchy";
+import { isCompleteFiniteDecimal, isIncompleteNumericDraft } from "../utils/factInput";
 
 export const validateDataset = (dataset: CubeDataset): string[] => {
   const errors: string[] = [];
@@ -16,17 +16,26 @@ export const validateDataset = (dataset: CubeDataset): string[] => {
       return;
     }
     const levelIds = new Set<string>();
+    const orders = new Set<number>();
+    const levels = orderedLevels(dimension);
     const rootOrder = Math.min(...dimension.levels.map((level) => level.order));
     const memberIds = new Set<string>();
     dimension.levels.forEach((level) => {
       if (levelIds.has(level.id)) errors.push(`Duplicate level ID in ${dimension.name}: ${level.id}.`);
       levelIds.add(level.id);
+      if (!Number.isFinite(level.order)) {
+        errors.push(`${dimension.name} / ${level.name} has a non-finite level order.`);
+      } else if (orders.has(level.order)) {
+        errors.push(`${dimension.name} has duplicate level order ${level.order}.`);
+      } else {
+        orders.add(level.order);
+      }
       if (level.members.length === 0) errors.push(`${dimension.name} / ${level.name} needs at least one member. Complete the hierarchy before rebuilding facts.`);
       level.members.forEach((member) => {
         if (memberIds.has(member.id)) errors.push(`Duplicate member ID in ${dimension.name}: ${member.id}.`);
         memberIds.add(member.id);
         if (member.levelId !== level.id) errors.push(`${member.label} has an incorrect level reference.`);
-        if (level.order > rootOrder && !member.parentMemberId) {
+        if (Number.isFinite(level.order) && level.order > rootOrder && !member.parentMemberId) {
           errors.push(`${member.label} needs a parent member because it is below the root level.`);
         }
         if (member.parentMemberId && !getMember(dimension, member.parentMemberId)) {
@@ -34,6 +43,14 @@ export const validateDataset = (dataset: CubeDataset): string[] => {
         }
       });
     });
+    // Require strictly increasing orders after sort so hierarchy index math stays unambiguous.
+    for (let index = 1; index < levels.length; index += 1) {
+      if (Number.isFinite(levels[index - 1].order) && Number.isFinite(levels[index].order)
+        && levels[index].order <= levels[index - 1].order) {
+        errors.push(`${dimension.name} level orders must be unique and strictly increasing.`);
+        break;
+      }
+    }
   });
 
   dataset.facts.forEach((fact, index) => {
@@ -45,10 +62,16 @@ export const validateDataset = (dataset: CubeDataset): string[] => {
     });
     dataset.measures.forEach((measure) => {
       const value = fact.measures[measure.id];
-      if (fact.measureInputs?.[measure.id] !== undefined) {
-        const raw = fact.measureInputs[measure.id];
-        if (raw.trim() === "" || !isCompleteFiniteDecimal(raw) || typeof value !== "number" || !Number.isFinite(value)) {
-          errors.push(`Fact row ${index + 1}: ${measure.name} is ${raw.trim() === "" ? "blank (unfinished, not zero)" : "invalid"}. Enter a finite number.`);
+      const raw = fact.measureInputs?.[measure.id];
+      if (raw !== undefined) {
+        if (raw.trim() === "") {
+          errors.push(`Fact row ${index + 1}: ${measure.name} is blank (unfinished, not zero). Enter a finite number.`);
+        } else if (isIncompleteNumericDraft(raw) && typeof value === "number" && Number.isFinite(value)) {
+          // Keep the live cube usable while the user finishes typing (e.g. "1.").
+        } else if (!isCompleteFiniteDecimal(raw) || typeof value !== "number" || !Number.isFinite(value)) {
+          errors.push(`Fact row ${index + 1}: ${measure.name} is invalid. Enter a finite number.`);
+        } else if (Number(raw) !== value) {
+          errors.push(`Fact row ${index + 1}: ${measure.name} text does not match the stored numeric value.`);
         }
       } else if (typeof value !== "number" || !Number.isFinite(value)) {
         errors.push(`Fact row ${index + 1} has a non-numeric ${measure.name} value.`);

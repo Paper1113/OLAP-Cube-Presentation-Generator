@@ -29,10 +29,19 @@ describe("fact measure input", () => {
     expect(setFactMeasureInput(fact(), "sales", "1.25e2").measures.sales).toBe(125);
   });
 
-  it("preserves a trailing decimal separator while the value is still being typed", () => {
+  it("preserves the last finite measure while a trailing decimal is still being typed", () => {
     const updated = setFactMeasureInput(fact(), "sales", "1.");
-    expect(updated.measures).toEqual({});
+    expect(updated.measures).toEqual({ sales: 42 });
     expect(updated.measureInputs).toEqual({ sales: "1." });
+    expect(factMeasureError(updated, "sales")).toBe("Finish editing the Sales value.");
+  });
+
+  it("continues from a trailing-decimal draft into a complete value", () => {
+    const draft = setFactMeasureInput(fact(), "sales", "42.");
+    const completed = setFactMeasureInput(draft, "sales", "42.5");
+    expect(completed.measures).toEqual({ sales: 42.5 });
+    expect(completed.measureInputs).toEqual({});
+    expect(factMeasureError(completed, "sales")).toBeUndefined();
   });
 
   it("preserves valid non-canonical text until blur", () => {
