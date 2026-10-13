@@ -8,7 +8,7 @@ import type {
 import type { AxisMapping, OperationConfig } from "../models/operation";
 import { addToAggregate, finalizeAggregates } from "./aggregation";
 import { describeOperation } from "./description";
-import { validateDataset } from "./validation";
+import { validateDataset, type ValidateDatasetOptions } from "./validation";
 import {
   getDimension,
   getLevel,
@@ -25,6 +25,8 @@ export interface CubeRequest {
   activeLevels: Record<string, string>;
   operation: OperationConfig;
 }
+
+export interface CubeBuildOptions extends ValidateDatasetOptions {}
 
 export interface CubeBuildResult {
   view: CubeViewModel | null;
@@ -168,8 +170,15 @@ const selectionsFor = (
   return { selections, errors };
 };
 
-const prepareCubeRequest = (dataset: CubeDataset, request: CubeRequest) => {
-  const errors = [...validateDataset(dataset), ...validAxisMapping(dataset, request.axisMapping)];
+const prepareCubeRequest = (
+  dataset: CubeDataset,
+  request: CubeRequest,
+  options: CubeBuildOptions = {},
+) => {
+  const errors = [
+    ...validateDataset(dataset, { allowIncompleteDrafts: options.allowIncompleteDrafts }),
+    ...validAxisMapping(dataset, request.axisMapping),
+  ];
   const measure: Measure | undefined = dataset.measures[0];
 
   const levels: Record<string, string> = {};
@@ -210,36 +219,73 @@ const prepareCubeRequest = (dataset: CubeDataset, request: CubeRequest) => {
   return {view: null, errors, measure, levels, sourceLevels, selections, x, y, z};
 };
 
-/** Shared preflight: validates facts, coordinates and selections without SUM or cells. */
-export const validateCubeRequest = (dataset: CubeDataset, request: CubeRequest): string[] =>
-  prepareCubeRequest(dataset, request).errors;
+const aggregatePreparedFacts = (
+  dataset: CubeDataset,
+  measure: Measure,
+  x: CubeAxisView,
+  y: CubeAxisView,
+  z: CubeAxisView,
+  selections: Record<string, string[]>,
+): Map<string, number> => {
+  const aggregateValues = new Map<string, number[]>();
+  dataset.facts.forEach((fact) => {
+    const mapped: Record<string, string> = {};
+    const dimensions = [x, y, z];
+    for (const axis of dimensions) {
+      const dimension = getDimension(dataset, axis.dimensionId);
+      const coordinate = fact.coordinates[axis.dimensionId];
+      const member = dimension && coordinate
+        ? memberAtLevel(dimension, coordinate, axis.levelId)
+        : undefined;
+      if (!member || !selections[axis.dimensionId].includes(member.id)) return;
+      mapped[axis.dimensionId] = member.id;
+    }
+    const value = fact.measures[measure.id];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      addToAggregate(aggregateValues, cellKey(mapped[x.dimensionId], mapped[y.dimensionId], mapped[z.dimensionId]), value);
+    }
+  });
+  return finalizeAggregates(aggregateValues);
+};
 
-export const createCubeView = (dataset: CubeDataset, request: CubeRequest): CubeBuildResult => {
-  const prepared = prepareCubeRequest(dataset, request);
+/** Shared preflight: validates facts, coordinates and selections without SUM or cells. */
+export const validateCubeRequest = (
+  dataset: CubeDataset,
+  request: CubeRequest,
+  options: CubeBuildOptions = {},
+): string[] => prepareCubeRequest(dataset, request, options).errors;
+
+/**
+ * Full request validation including SUM overflow, without allocating Cartesian cells.
+ * Used for presentation export gating on every keystroke.
+ */
+export const validateCubeAggregation = (
+  dataset: CubeDataset,
+  request: CubeRequest,
+  options: CubeBuildOptions = {},
+): string[] => {
+  const prepared = prepareCubeRequest(dataset, request, options);
+  const { errors, measure, selections, x, y, z } = prepared;
+  if (errors.length || !measure || !x || !y || !z || !selections) return errors;
+  try {
+    aggregatePreparedFacts(dataset, measure, x, y, z, selections);
+    return [];
+  } catch (error) {
+    return [error instanceof Error ? error.message : "SUM failed."];
+  }
+};
+
+export const createCubeView = (
+  dataset: CubeDataset,
+  request: CubeRequest,
+  options: CubeBuildOptions = {},
+): CubeBuildResult => {
+  const prepared = prepareCubeRequest(dataset, request, options);
   const {errors, measure, sourceLevels, selections, x, y, z} = prepared;
   if (errors.length || !measure || !x || !y || !z || !selections || !sourceLevels) return {view:null, errors};
-  const aggregateValues = new Map<string, number[]>();
   let aggregates: Map<string, number>;
   try {
-    dataset.facts.forEach((fact) => {
-      const mapped: Record<string, string> = {};
-      const dimensions = [x, y, z];
-      for (const axis of dimensions) {
-        const dimension = getDimension(dataset, axis.dimensionId);
-        const coordinate = fact.coordinates[axis.dimensionId];
-        const member = dimension && coordinate
-          ? memberAtLevel(dimension, coordinate, axis.levelId)
-          : undefined;
-        if (!member || !selections[axis.dimensionId].includes(member.id)) return;
-        mapped[axis.dimensionId] = member.id;
-      }
-      const value = fact.measures[measure.id];
-      if (typeof value === "number" && Number.isFinite(value)) {
-        addToAggregate(aggregateValues, cellKey(mapped[x.dimensionId], mapped[y.dimensionId], mapped[z.dimensionId]), value);
-      }
-    });
-    aggregates = finalizeAggregates(aggregateValues);
-
+    aggregates = aggregatePreparedFacts(dataset, measure, x, y, z, selections);
   } catch (error) {
     return { view: null, errors: [error instanceof Error ? error.message : "SUM failed."] };
   }

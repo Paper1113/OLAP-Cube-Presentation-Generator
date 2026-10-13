@@ -2,7 +2,19 @@ import type { CubeDataset } from "../models/cube";
 import { getMember, getLevel, orderedLevels } from "./hierarchy";
 import { isCompleteFiniteDecimal, isIncompleteNumericDraft } from "../utils/factInput";
 
-export const validateDataset = (dataset: CubeDataset): string[] => {
+export interface ValidateDatasetOptions {
+  /**
+   * When true, incomplete numeric drafts (e.g. `1.`) that still retain a finite
+   * measure are allowed so the live preview can keep rendering while typing.
+   * Export paths must leave this unset/false.
+   */
+  allowIncompleteDrafts?: boolean;
+}
+
+export const validateDataset = (
+  dataset: CubeDataset,
+  options: ValidateDatasetOptions = {},
+): string[] => {
   const errors: string[] = [];
   if (dataset.measures.length === 0) errors.push("Add a SUM measure before rendering a cube.");
   if (dataset.dimensions.length !== 3) errors.push("Exactly three dimensions are required.");
@@ -67,7 +79,9 @@ export const validateDataset = (dataset: CubeDataset): string[] => {
         if (raw.trim() === "") {
           errors.push(`Fact row ${index + 1}: ${measure.name} is blank (unfinished, not zero). Enter a finite number.`);
         } else if (isIncompleteNumericDraft(raw) && typeof value === "number" && Number.isFinite(value)) {
-          // Keep the live cube usable while the user finishes typing (e.g. "1.").
+          if (!options.allowIncompleteDrafts) {
+            errors.push(`Fact row ${index + 1}: ${measure.name} is unfinished. Finish editing before exporting.`);
+          }
         } else if (!isCompleteFiniteDecimal(raw) || typeof value !== "number" || !Number.isFinite(value)) {
           errors.push(`Fact row ${index + 1}: ${measure.name} is invalid. Enter a finite number.`);
         } else if (Number(raw) !== value) {

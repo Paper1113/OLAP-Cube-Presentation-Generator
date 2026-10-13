@@ -36,6 +36,15 @@ describe("fact measure input", () => {
     expect(factMeasureError(updated, "sales")).toBe("Finish editing the Sales value.");
   });
 
+  it("reverts an incomplete draft to the retained measure on blur", () => {
+    const draft = setFactMeasureInput(fact(), "sales", "1.");
+    expect(commitFactMeasureInput(draft, "sales")).toEqual({
+      ...fact(),
+      measureInputs: {},
+      measures: { sales: 42 },
+    });
+  });
+
   it("continues from a trailing-decimal draft into a complete value", () => {
     const draft = setFactMeasureInput(fact(), "sales", "42.");
     const completed = setFactMeasureInput(draft, "sales", "42.5");

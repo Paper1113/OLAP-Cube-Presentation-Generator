@@ -56,8 +56,16 @@ export const setFactMeasureInput = (fact: FactRecord, measureId: string, raw: st
 
 export const commitFactMeasureInput = (fact: FactRecord, measureId: string): FactRecord => {
   const raw = fact.measureInputs?.[measureId];
-  if (raw === undefined || !isCompleteFiniteDecimal(raw) || !Number.isFinite(fact.measures[measureId])) return fact;
+  if (raw === undefined) return fact;
   const measureInputs = { ...fact.measureInputs };
-  delete measureInputs[measureId];
-  return { ...fact, measureInputs };
+  // Complete non-canonical text, or incomplete drafts that still hold a finite value,
+  // both clear back to the stored numeric measure on blur.
+  if (
+    (isCompleteFiniteDecimal(raw) || isIncompleteNumericDraft(raw))
+    && Number.isFinite(fact.measures[measureId])
+  ) {
+    delete measureInputs[measureId];
+    return { ...fact, measureInputs };
+  }
+  return fact;
 };

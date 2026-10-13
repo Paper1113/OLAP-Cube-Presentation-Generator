@@ -1,4 +1,4 @@
-import { createCubeView } from "../engine/cubeEngine";
+import { createCubeView, validateCubeAggregation } from "../engine/cubeEngine";
 import { rollupSourceLevel } from "../engine/hierarchy";
 import type { CubeDataset, CubeViewModel } from "../models/cube";
 import type { AxisMapping, OperationConfig, OperationSettings, OperationType } from "../models/operation";
@@ -148,16 +148,18 @@ export const presentationErrors = (slides: PresentationSlideModel[]): string[] =
   .map(slide => `${slide.title}: ${slide.errors.join(" ")} Fix this operation's selections or hierarchy settings; check Original cube levels and axis mapping in Advanced Settings.`);
 
 /**
- * Full engine validation for every operation slide, including SUM overflow.
- * Button gating and export refusal must stay aligned with this check.
+ * Export gating for every operation slide: hierarchy/selection checks plus SUM
+ * overflow, without allocating Cartesian cube cells on each editor keystroke.
+ * Button gating must stay aligned with final `buildPresentationSlides` refusal.
  */
 export const validatePresentation = (input: PresentationInput) => configuredOperations(input.operations)
-  .map(operation => {
-    const result = createCubeView(input.dataset, {
+  .map(operation => ({
+    kind: operation.type,
+    title: operationTitles[operation.type],
+    errors: validateCubeAggregation(input.dataset, {
       axisMapping: input.axisMapping,
       activeLevels: input.activeLevels,
       operation,
-    });
-    return { kind: operation.type, title: operationTitles[operation.type], errors: result.errors };
-  })
+    }),
+  }))
   .filter(result => result.errors.length > 0);

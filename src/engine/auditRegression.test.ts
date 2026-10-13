@@ -58,8 +58,18 @@ describe("audit regressions", () => {
     const draft = setFactMeasureInput(w.dataset.facts[0], "sales", "1.");
     w.dataset.facts[0] = draft;
     expect(draft.measures.sales).toBeTypeOf("number");
-    expect(validateDataset(w.dataset)).toEqual([]);
-    expect(createCubeView(w.dataset, { ...w, operation: { type: "original" } }).view).not.toBeNull();
+    expect(validateDataset(w.dataset, { allowIncompleteDrafts: true })).toEqual([]);
+    expect(createCubeView(w.dataset, { ...w, operation: { type: "original" } }, { allowIncompleteDrafts: true }).view)
+      .not.toBeNull();
+  });
+
+  it("blocks exports while an unfinished Sales draft remains", () => {
+    const w = workspace();
+    w.dataset.facts[0] = setFactMeasureInput(w.dataset.facts[0], "sales", "1.");
+    expect(validateDataset(w.dataset).join(" ")).toMatch(/unfinished/i);
+    expect(validatePresentation(w).length).toBeGreaterThan(0);
+    // Strict createCubeView (export path) must also refuse unfinished drafts.
+    expect(createCubeView(w.dataset, { ...w, operation: { type: "original" } }).view).toBeNull();
   });
 
   it("rejects missing or empty activeLevels instead of falling back to the leaf", () => {

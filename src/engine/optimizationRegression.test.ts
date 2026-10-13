@@ -56,6 +56,12 @@ describe('precision and presentation preflight',()=>{
   expect(validatePresentation(w).length).toBeGreaterThan(0);
   expect(presentationErrors(buildPresentationSlides(w)).length).toBeGreaterThan(0);
  });
+ it('presentation validation does not allocate Cartesian cells for overflow gating',()=>{
+  const w=workspace();w.dataset.facts.forEach(f=>f.measures.sales=Number.MAX_VALUE);
+  const issues=validatePresentation(w);
+  expect(issues.length).toBeGreaterThan(0);
+  expect(issues.every(issue=>issue.errors.some(error=>/SUM/i.test(error)))).toBe(true);
+ });
  it('disables PowerPoint when any slide SUM overflows',()=>{
   const w=workspace();w.dataset.facts.forEach(f=>f.measures.sales=Number.MAX_VALUE);
   expect(validatePresentation(w).length).toBeGreaterThan(0);

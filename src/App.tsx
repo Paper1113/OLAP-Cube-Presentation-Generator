@@ -90,7 +90,7 @@ export default function App() {
       axisMapping: workspace.axisMapping,
       activeLevels: workspace.activeLevels,
       operation,
-    }),
+    }, { allowIncompleteDrafts: true }),
     [workspace.dataset, workspace.axisMapping, workspace.activeLevels, operation],
   );
   const presentationIssues = useMemo(() => validatePresentation(workspace),
@@ -105,14 +105,20 @@ export default function App() {
       } else document.getElementById(`operation-tab-${kind}`)?.focus();
     });
   };
+  // Strict dataset checks (including unfinished drafts) gate every export path.
   const validationErrors = useMemo(() => validateDataset(workspace.dataset), [workspace.dataset]);
   const visibleErrors = uniqueErrors([...validationErrors, ...cubeResult.errors]);
+  const exportBlocked = validationErrors.length > 0 || cubeResult.errors.length > 0 || presentationIssues.length > 0;
   const filenameBase = safeFilename(`${workspace.dataset.title}-${operation.type}`);
   const selectedIndustryId = selectedIndustryFor(workspace);
   const generatedTemplate = getIndustryTemplate(workspace.generation?.industryId ?? "");
   const appearance = useMemo(() => normalizeCubeAppearance(workspace.appearance), [workspace.appearance]);
 
   const handleSvgExport = () => {
+    if (validationErrors.length > 0) {
+      setExportStatus(`SVG blocked: ${validationErrors.join(" ")}`);
+      return;
+    }
     const svg = activeSvgElement();
     if (!svg) {
       setExportStatus("The current cube is unavailable for export.");
@@ -123,6 +129,10 @@ export default function App() {
   };
 
   const handlePngExport = async () => {
+    if (validationErrors.length > 0) {
+      setExportStatus(`PNG blocked: ${validationErrors.join(" ")}`);
+      return;
+    }
     const svg = activeSvgElement();
     if (!svg) {
       setExportStatus("The current cube is unavailable for export.");
@@ -139,6 +149,10 @@ export default function App() {
 
   const handlePptxExport = async () => {
     if (pptxBusy) return;
+    if (validationErrors.length > 0) {
+      setExportStatus(`PowerPoint blocked: ${validationErrors.join(" ")}`);
+      return;
+    }
     if (cubeResult.errors.length > 0) {
       setExportStatus(`PowerPoint blocked: ${cubeResult.errors.join(" ")}`);
       return;
@@ -195,10 +209,8 @@ export default function App() {
       return;
     }
     try {
-      setWorkspace((current) => ({
-        ...current,
-        dataset: refreshSalesFacts(current.dataset, generatedTemplate),
-      }));
+      const dataset = refreshSalesFacts(workspace.dataset, generatedTemplate);
+      setWorkspace((current) => ({ ...current, dataset }));
       setExportStatus("Sales values were refreshed. Hierarchies, coordinates, and OLAP settings were preserved.");
     } catch (error) {
       setExportStatus(error instanceof Error ? error.message : "Sales refresh failed.");
@@ -310,9 +322,9 @@ export default function App() {
               {cubeResult.view && <p className="preview-description">{cubeResult.view.description}</p>}
             </section>
             <div className="preview-actions">
-              <button type="button" className="secondary-button" onClick={handleSvgExport} disabled={!cubeResult.view}>Export SVG</button>
-              <button type="button" className="secondary-button" onClick={() => void handlePngExport()} disabled={!cubeResult.view}>Export PNG</button>
-              <button type="button" className="primary-button" onClick={() => void handlePptxExport()} disabled={pptxBusy || presentationIssues.length > 0 || cubeResult.errors.length > 0}>{pptxBusy ? "Creating PowerPoint…" : "Export PowerPoint"}</button>
+              <button type="button" className="secondary-button" onClick={handleSvgExport} disabled={!cubeResult.view || validationErrors.length > 0}>Export SVG</button>
+              <button type="button" className="secondary-button" onClick={() => void handlePngExport()} disabled={!cubeResult.view || validationErrors.length > 0}>Export PNG</button>
+              <button type="button" className="primary-button" onClick={() => void handlePptxExport()} disabled={pptxBusy || exportBlocked}>{pptxBusy ? "Creating PowerPoint…" : "Export PowerPoint"}</button>
               <button type="button" className="secondary-button" onClick={() => setMode("presentation")}>Open presentation preview</button>
             </div>
             <p className="export-status" role="status">{exportStatus}</p>
