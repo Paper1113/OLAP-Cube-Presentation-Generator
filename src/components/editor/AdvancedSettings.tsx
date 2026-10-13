@@ -9,6 +9,7 @@ interface AdvancedSettingsProps {
   dataset: CubeDataset;
   axisMapping: AxisMapping;
   activeLevels: Record<string, string>;
+  canRefreshSales: boolean;
   onDatasetChange: (dataset: CubeDataset) => void;
   onAxisMappingChange: (axisMapping: AxisMapping) => void;
   onActiveLevelsChange: (activeLevels: Record<string, string>) => void;
@@ -23,6 +24,7 @@ export const AdvancedSettings = ({
   dataset,
   axisMapping,
   activeLevels,
+  canRefreshSales,
   onDatasetChange,
   onAxisMappingChange,
   onActiveLevelsChange,
@@ -54,7 +56,12 @@ export const AdvancedSettings = ({
         </div>
         <button type="button" className="secondary-button" onClick={onSynchronizeFacts}>Apply Changes &amp; Rebuild Facts</button>
       </section>
-      <FactGrid dataset={dataset} onDatasetChange={onDatasetChange} onRefreshAllSales={onRefreshSales} />
+      <FactGrid
+        dataset={dataset}
+        canRefreshSales={canRefreshSales}
+        onDatasetChange={onDatasetChange}
+        onRefreshAllSales={onRefreshSales}
+      />
       <div className="dataset-actions" aria-label="Dataset utilities">
         <button type="button" className="secondary-button" onClick={onLoadSample}>Load Furniture sample</button>
         <button type="button" className="text-button danger-button" onClick={onReset}>Reset dataset</button>
