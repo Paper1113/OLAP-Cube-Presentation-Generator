@@ -128,12 +128,11 @@ const createDimensions = (template: IndustryTemplate, year: number): Dimension[]
   ];
 };
 
+/** Strict deepest level only — never skip an empty leaf to a populated parent. */
 const leafMemberIds = (dataset: CubeDataset, dimensionId: string): string[] => {
   const dimension = dataset.dimensions.find((candidate) => candidate.id === dimensionId);
-  const level = dimension
-    ? [...orderedLevels(dimension)].reverse().find((candidate) => candidate.members.length > 0)
-    : undefined;
-  return level?.members.map((member) => member.id) ?? [];
+  const leafLevel = dimension ? orderedLevels(dimension).at(-1) : undefined;
+  return leafLevel?.members.map((member) => member.id) ?? [];
 };
 
 const memberIdsAtLevel = (dataset: CubeDataset, dimensionId: string, levelId: string): string[] =>
@@ -293,6 +292,16 @@ export const refreshSalesFacts = (
   const productIndexes = indexByMemberId(dataset, "product");
   const cityIndexes = indexByMemberId(dataset, "location");
 
+  for (const fact of dataset.facts) {
+    if (!monthIndexes.has(fact.coordinates.time)
+      || !productIndexes.has(fact.coordinates.product)
+      || !cityIndexes.has(fact.coordinates.location)) {
+      throw new Error(
+        "Refresh Sales requires every fact coordinate to match a current leaf member. Rebuild facts after hierarchy changes, or regenerate the dataset.",
+      );
+    }
+  }
+
   return {
     ...dataset,
     facts: dataset.facts.map((fact) => ({
@@ -303,9 +312,9 @@ export const refreshSalesFacts = (
         ...fact.measures,
         sales: generateSalesValue({
           industry: template,
-          monthIndex: monthIndexes.get(fact.coordinates.time) ?? 0,
-          productIndex: productIndexes.get(fact.coordinates.product) ?? 0,
-          cityIndex: cityIndexes.get(fact.coordinates.location) ?? 0,
+          monthIndex: monthIndexes.get(fact.coordinates.time)!,
+          productIndex: productIndexes.get(fact.coordinates.product)!,
+          cityIndex: cityIndexes.get(fact.coordinates.location)!,
         }, random),
       },
     })),
