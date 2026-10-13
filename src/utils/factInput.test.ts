@@ -70,4 +70,14 @@ describe("fact measure input", () => {
     expect(updated.measures).toEqual({ sales: 100 });
     expect(updated.measureInputs).toEqual({ sales: "1e2" });
   });
+
+  it.each(["1.2e", "1.2e-", "1.2e+", ".5e", ".5e-", "1.e"])(
+    "preserves the last finite measure for decimal scientific draft %s",
+    (draft) => {
+      const updated = setFactMeasureInput(fact(), "sales", draft);
+      expect(updated.measures).toEqual({ sales: 42 });
+      expect(updated.measureInputs).toEqual({ sales: draft });
+      expect(factMeasureError(updated, "sales")).toBe("Finish editing the Sales value.");
+    },
+  );
 });

@@ -2,8 +2,11 @@ import type { FactRecord } from "../models/cube";
 
 const completeFiniteDecimalPattern = /^[+-]?(?:(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][+-]?\d+)?)$/;
 
-/** Incomplete numeric drafts such as `1.`, `1e`, `-`, or `.` while the user is still typing. */
-const incompleteNumericDraftPattern = /^[+-]?(?:\d+\.|\d+[eE][+-]?|\d*[eE]|[.]?)$/;
+/**
+ * Incomplete numeric drafts while the user is still typing, including decimal
+ * mantissas with unfinished exponents: `1.`, `1e`, `1.2e`, `1.2e-`, `.5e`, `-`, `.`.
+ */
+const incompleteNumericDraftPattern = /^[+-]?(?:(?:\d+\.\d*|\.\d+|\d+)[eE][+-]?|\d+\.\d*|\.)?$/;
 
 export const isCompleteFiniteDecimal = (raw: string): boolean =>
   completeFiniteDecimalPattern.test(raw.trim()) && Number.isFinite(Number(raw));

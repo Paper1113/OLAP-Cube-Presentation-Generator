@@ -1,4 +1,7 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { DimensionEditor } from "../components/editor/DimensionEditor";
 import { generateIndustryWorkspace, refreshSalesFacts } from "../generator/datasetGenerator";
 import { getIndustryTemplate } from "../generator/industryTemplates";
 import { buildPresentationSlides, validatePresentation } from "../export/presentationModel";
@@ -81,6 +84,21 @@ describe("audit regressions", () => {
     w.activeLevels.product = "";
     expect(createCubeView(w.dataset, { ...w, operation: { type: "original" } }).errors.join(" "))
       .toContain("Original cube level is unavailable");
+  });
+
+  it("shows the repair placeholder when an Original cube level entry is missing", () => {
+    const w = workspace();
+    delete w.activeLevels.product;
+    const html = renderToStaticMarkup(createElement(DimensionEditor, {
+      dataset: w.dataset,
+      activeLevels: w.activeLevels,
+      onDatasetChange: () => {},
+      onActiveLevelsChange: () => {},
+    }));
+    expect(html).toContain('value=""');
+    expect(html).toContain("請重新選擇層級 / Select a level again");
+    // Must not present the Product leaf as already selected for a missing entry.
+    expect(html).not.toMatch(/<select[^>]*value="product-item"/);
   });
 
   it("rejects measureInputs that disagree with stored measures", () => {
