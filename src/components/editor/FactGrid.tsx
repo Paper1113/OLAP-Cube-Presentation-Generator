@@ -5,6 +5,7 @@ import { RANDOM_SALES_MAX, RANDOM_SALES_MIN, randomSalesValue } from "../../util
 
 interface FactGridProps {
   dataset: CubeDataset;
+  canRefreshSales: boolean;
   onDatasetChange: (dataset: CubeDataset) => void;
   onRefreshAllSales: () => void;
 }
@@ -18,7 +19,7 @@ const coordinateLabel = (fact: FactRecord, dimension: CubeDataset["dimensions"][
 };
 
 /** Displays systematic fact coordinates as context; only Sales is editable. */
-export const FactGrid = ({ dataset, onDatasetChange, onRefreshAllSales }: FactGridProps) => {
+export const FactGrid = ({ dataset, canRefreshSales, onDatasetChange, onRefreshAllSales }: FactGridProps) => {
   const measure = dataset.measures.find((candidate) => candidate.id === "sales") ?? dataset.measures[0];
 
   const updateFact = (rowIndex: number, update: (fact: FactRecord) => FactRecord) => {
@@ -40,7 +41,7 @@ export const FactGrid = ({ dataset, onDatasetChange, onRefreshAllSales }: FactGr
           <h2 id="facts-heading">Fact Data</h2>
           <p className="hint">Coordinates come from the hierarchy. Edit or randomize only synthetic Sales values.</p>
         </div>
-        <button type="button" className="secondary-button" onClick={onRefreshAllSales}>
+        <button type="button" className="secondary-button" onClick={onRefreshAllSales} disabled={!canRefreshSales}>
           ↻ Refresh All Sales
         </button>
       </div>
